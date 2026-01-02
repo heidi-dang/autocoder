@@ -22,7 +22,7 @@ export function TypingIndicator() {
           style={{ animationDelay: '300ms' }}
         />
       </div>
-      <span className="text-sm text-[var(--color-neo-text-secondary)] font-mono">
+      <span className="text-sm font-mono animate-shimmer">
         Claude is thinking...
       </span>
     </div>
