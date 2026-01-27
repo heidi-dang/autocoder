@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/react";
 
 const USER_KEY = "autocoder_sentry_user_id";
+const PROFILE_KEY = "autocoder_sentry_user_profile";
 
 function getUserId(): string | undefined {
   try {
@@ -13,6 +14,34 @@ function getUserId(): string | undefined {
     return generated;
   } catch {
     return undefined;
+  }
+}
+
+function maybePromptUserProfile() {
+  const shouldPrompt = import.meta.env.VITE_SENTRY_PROMPT_USER === "1";
+  if (!shouldPrompt) return undefined;
+
+  try {
+    const cached = localStorage.getItem(PROFILE_KEY);
+    if (cached) return JSON.parse(cached) as { name?: string; email?: string };
+
+    const name = window.prompt("Enter your display name (optional):") || undefined;
+    const email = window.prompt("Enter your email (optional):") || undefined;
+    const profile = { name, email };
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    return profile;
+  } catch {
+    return undefined;
+  }
+}
+
+export function setSentryProject(project: string | null) {
+  const client = Sentry.getCurrentHub().getClient();
+  if (!client) return;
+  if (project) {
+    Sentry.setTag("project", project);
+  } else {
+    Sentry.setTag("project", "none");
   }
 }
 
@@ -36,7 +65,8 @@ export function initSentry() {
 
   const userId = getUserId();
   if (userId) {
-    Sentry.setUser({ id: userId });
+    const profile = maybePromptUserProfile();
+    Sentry.setUser({ id: userId, ...profile });
   }
   Sentry.setTag("app", "autocoder-ui");
   Sentry.setTag("origin", window.location.origin);

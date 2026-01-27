@@ -37,6 +37,7 @@ import type { Feature } from "./lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { setSentryProject } from "./lib/sentry";
 
 const STORAGE_KEY = "autocoder-selected-project";
 const VIEW_MODE_KEY = "autocoder-view-mode";
@@ -119,6 +120,11 @@ function App() {
       // localStorage not available
     }
   }, []);
+
+  // Update Sentry tag when project changes
+  useEffect(() => {
+    setSentryProject(selectedProject);
+  }, [selectedProject]);
 
   // Handle graph node click - memoized to prevent DependencyGraph re-renders
   const handleGraphNodeClick = useCallback(
