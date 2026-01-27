@@ -1,5 +1,21 @@
 import * as Sentry from "@sentry/react";
 
+const USER_KEY = "autocoder_sentry_user_id";
+
+function getUserId(): string | undefined {
+  try {
+    const existing = localStorage.getItem(USER_KEY);
+    if (existing) return existing;
+    const generated = crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2);
+    localStorage.setItem(USER_KEY, generated);
+    return generated;
+  } catch {
+    return undefined;
+  }
+}
+
 export function initSentry() {
   const dsn = import.meta.env.VITE_SENTRY_DSN;
   if (!dsn) return;
@@ -17,4 +33,11 @@ export function initSentry() {
       Sentry.replayIntegration(),
     ],
   });
+
+  const userId = getUserId();
+  if (userId) {
+    Sentry.setUser({ id: userId });
+  }
+  Sentry.setTag("app", "autocoder-ui");
+  Sentry.setTag("origin", window.location.origin);
 }
