@@ -2,7 +2,7 @@ name: PR Check
 
 on:
   pull_request:
-    branches: [main, master]
+    branches: [main]
 
 permissions:
   contents: read
@@ -12,6 +12,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  repo-guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure .code/ and .env are not tracked
+        shell: bash
+        run: |
+          tracked_code="$(git ls-files -- .code)"
+          tracked_env="$(git ls-files -- .env)"
+
+          if [ -n "$tracked_code" ] || [ -n "$tracked_env" ]; then
+            echo "Local-only policy and secrets files must not be tracked."
+            if [ -n "$tracked_code" ]; then
+              echo "Tracked .code/ entries:"
+              echo "$tracked_code"
+            fi
+            if [ -n "$tracked_env" ]; then
+              echo "Tracked .env entries:"
+              echo "$tracked_env"
+            fi
+            exit 1
+          fi
+
   python:
     runs-on: ubuntu-latest
     steps:
