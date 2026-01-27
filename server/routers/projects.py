@@ -16,9 +16,9 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, HTTPException
 
 from ..schemas import (
-    ProjectCreate,
     ProjectCloneRequest,
     ProjectCloneResponse,
+    ProjectCreate,
     ProjectDetail,
     ProjectPrompts,
     ProjectPromptsUpdate,
