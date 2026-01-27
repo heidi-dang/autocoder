@@ -60,3 +60,8 @@ Guidelines
 - [ ] “Run locally in 5 minutes” doc/script
 - [ ] Config matrix for all env vars (Claude, Gemini, DuckDNS, Traefik, TLS)
 - [ ] Architecture overview diagram
+
+## Phase 8 — Documentation & Onboarding
+- [ ] “Run locally in 5 minutes” doc/script
+- [ ] Config matrix for all env vars (Claude, Gemini, DuckDNS, Traefik, TLS)
+- [ ] Architecture overview diagram
