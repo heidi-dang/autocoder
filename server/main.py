@@ -117,6 +117,26 @@ else:
 
 
 # ============================================================================
+# Health Endpoint
+# ============================================================================
+
+@app.get("/health")
+async def health():
+    """Lightweight liveness probe used by deploy smoke tests."""
+    return {"status": "ok"}
+
+
+@app.get("/readiness")
+async def readiness():
+    """
+    Readiness probe placeholder.
+
+    Add dependency checks (DB, external APIs, queues) here when introduced.
+    """
+    return {"status": "ready"}
+
+
+# ============================================================================
 # Security Middleware
 # ============================================================================
 
