@@ -5,6 +5,7 @@ Projects Router
 API endpoints for project management.
 Uses project registry for path lookups instead of fixed generations/ directory.
 """
+
 import re
 import shutil
 import subprocess
