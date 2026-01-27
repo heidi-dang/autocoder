@@ -1,23 +1,16 @@
-version: "3.9"
-
 services:
   traefik:
     image: traefik:latest
-    environment:
-      # Force a modern Docker API version. Some VPS environments set
-      # DOCKER_API_VERSION=1.24 globally, which breaks Traefik's Docker provider
-      # when the daemon requires >= 1.44.
-      # Use the server's current API version to avoid a too-old client default.
-      - DOCKER_API_VERSION=1.53
     command:
       - --providers.docker=true
+      - --providers.docker.endpoint=unix:///var/run/docker.sock
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.le.acme.httpchallenge=true
-      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.le.acme.email=${LETSENCRYPT_EMAIL}
-      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
     ports:
       - "80:80"
       - "443:443"
@@ -31,15 +24,16 @@ services:
     networks:
       - traefik-proxy
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.autocoder.rule=Host(`${DOMAIN}`)
-      - traefik.http.routers.autocoder.entrypoints=websecure
-      - traefik.http.routers.autocoder.tls.certresolver=le
-      - traefik.http.services.autocoder.loadbalancer.server.port=${APP_PORT:-8888}
-      - traefik.http.routers.autocoder-web.rule=Host(`${DOMAIN}`)
-      - traefik.http.routers.autocoder-web.entrypoints=web
-      - traefik.http.routers.autocoder-web.middlewares=redirect-to-https
-      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - "traefik.enable=true"
+      - "traefik.http.routers.autocoder.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.autocoder.entrypoints=web"
+      - "traefik.http.routers.autocoder.middlewares=redirect-to-https"
+      - "traefik.http.routers.autocoder-secure.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.autocoder-secure.entrypoints=websecure"
+      - "traefik.http.routers.autocoder-secure.tls=true"
+      - "traefik.http.routers.autocoder-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.services.autocoder.loadbalancer.server.port=${APP_PORT:-8888}"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
 
 networks:
   traefik-proxy:

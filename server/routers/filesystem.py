@@ -26,8 +26,24 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Module logger
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/api/filesystem", tags=["filesystem"])
+
+
+def _parse_allowed_roots() -> list[Path]:
+    """Parse AUTOCODER_ALLOWED_ROOTS (comma-separated) safely."""
+    raw = os.environ.get("AUTOCODER_ALLOWED_ROOTS", "")
+    roots: list[Path] = []
+    for part in (entry.strip() for entry in raw.split(",")):
+        if not part:
+            continue
+        try:
+            roots.append(Path(part).expanduser().resolve(strict=False))
+        except Exception as exc:  # pragma: no cover - best-effort parsing
+            logger.warning("Ignored invalid allowed root %r: %s", part, exc)
+    return roots
+
+
+ALLOWED_ROOTS = _parse_allowed_roots()
 
 
 # =============================================================================
@@ -131,6 +147,10 @@ def is_path_blocked(path: Path) -> bool:
     except (OSError, ValueError):
         return True  # Can't resolve = blocked
 
+    # Allow explicitly configured roots even if they fall under blocked parents.
+    if is_path_allowed(resolved):
+        return False
+
     # Allow paths under the workspace root even if parent is blocked (/opt/etc)
     if resolved == REPO_ROOT or REPO_ROOT in resolved.parents:
         return False
@@ -148,6 +168,21 @@ def is_path_blocked(path: Path) -> bool:
         # Also check if blocked is inside path (for parent directories)
         if resolved == blocked:
             return True
+
+    return False
+
+
+def is_path_allowed(path: Path) -> bool:
+    """Allowlist check for configured roots."""
+    if not ALLOWED_ROOTS:
+        return False
+
+    for root in ALLOWED_ROOTS:
+        try:
+            path.relative_to(root)
+            return True
+        except ValueError:
+            continue
 
     return False
 

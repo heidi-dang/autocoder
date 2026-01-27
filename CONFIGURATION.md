@@ -13,6 +13,9 @@
 - `AUTOCODER_ALLOW_REMOTE` — allow remote CORS (set to `1/true` to relax localhost-only guard).
 - `API_TIMEOUT_MS` — passed to Claude SDK.
 
+## Filesystem access
+- `AUTOCODER_ALLOWED_ROOTS` — comma-separated directories that the `/api/filesystem/*` endpoints are allowed to list. Mount the corresponding host paths into Docker (e.g., `- /opt/autocoder/projects:/projects`) so the container can reach them. Paths outside this allowlist remain forbidden even if they are readable on the host.
+
 ## Observability
 - Backend Sentry: `SENTRY_DSN` (required to enable), optional `SENTRY_ENV`, `SENTRY_TRACES_SAMPLE_RATE` (default 0.2).
 - Frontend Sentry: `VITE_SENTRY_DSN` (required to enable), optional `VITE_SENTRY_ENV`, `VITE_SENTRY_TRACES_SAMPLE_RATE`, `VITE_SENTRY_PROMPT_USER=1` to prompt for name/email.
