@@ -6,12 +6,13 @@ API endpoints for project management.
 Uses project registry for path lookups instead of fixed generations/ directory.
 """
 
+from pathlib import Path
+from urllib.parse import urlparse
+
 import re
 import shutil
 import subprocess
 import sys
-from pathlib import Path
-from urllib.parse import urlparse
 
 from fastapi import APIRouter, HTTPException
 
