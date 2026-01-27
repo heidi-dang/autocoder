@@ -9,13 +9,14 @@ Provides REST API, WebSocket, and static file serving.
 import asyncio
 import logging
 import os
+import re
 import shutil
 import sys
 import uuid
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Optional
-from contextvars import ContextVar
 
 # Fix for Windows subprocess support in asyncio
 if sys.platform == "win32":
@@ -151,6 +152,23 @@ REQUEST_LATENCY = Histogram(
 )
 
 
+METRICS_ENABLED = os.environ.get("AUTOCODER_ENABLE_METRICS", "").lower() in ("1", "true", "yes")
+
+
+def normalize_path(path: str) -> str:
+    if not path:
+        return "/"
+    normalized = re.sub(
+        r"/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+        "/:uuid",
+        path,
+        flags=re.IGNORECASE,
+    )
+    normalized = re.sub(r"/[0-9a-f]{8,}", "/:id", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"/\d+", "/:num", normalized)
+    return normalized or "/"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown."""
@@ -234,12 +252,6 @@ async def readiness():
     return {"status": "ready"}
 
 
-@app.get("/metrics")
-async def metrics():
-    """Prometheus metrics endpoint."""
-    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
-
-
 # ============================================================================
 # Security Middleware
 # ============================================================================
@@ -270,16 +282,25 @@ async def request_id_middleware(request: Request, call_next):
     return response
 
 
-@app.middleware("http")
-async def metrics_middleware(request: Request, call_next):
-    """Capture basic Prometheus metrics."""
-    path = request.url.path
-    method = request.method
-    with REQUEST_LATENCY.labels(method=method, path=path).time():
-        response: Response = await call_next(request)
-    status = response.status_code
-    REQUEST_COUNTER.labels(method=method, path=path, status=status).inc()
-    return response
+if METRICS_ENABLED:
+    @app.get("/metrics")
+    async def metrics():
+        """Prometheus metrics endpoint."""
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+    @app.middleware("http")
+    async def metrics_middleware(request: Request, call_next):
+        """Capture basic Prometheus metrics."""
+        path = request.url.path
+        if path == "/metrics":
+            return await call_next(request)
+        method = request.method
+        normalized = normalize_path(path)
+        with REQUEST_LATENCY.labels(method=method, path=normalized).time():
+            response: Response = await call_next(request)
+        status = response.status_code
+        REQUEST_COUNTER.labels(method=method, path=normalized, status=status).inc()
+        return response
 
 
 # ============================================================================

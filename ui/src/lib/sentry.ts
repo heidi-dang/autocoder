@@ -36,8 +36,6 @@ function maybePromptUserProfile() {
 }
 
 export function setSentryProject(project: string | null) {
-  const client = Sentry.getCurrentHub().getClient();
-  if (!client) return;
   if (project) {
     Sentry.setTag("project", project);
   } else {
