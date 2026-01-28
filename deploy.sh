@@ -115,10 +115,10 @@ DEPLOY_BRANCH=${DEPLOY_BRANCH:-main}
 
 if [[ -z "${APP_DIR:-}" ]]; then
   if [[ "${AUTOMATED_MODE}" -eq 0 ]]; then
-    read -r -p "Install path [/opt/autocoder]: " APP_DIR
+    read -r -p "Install path [/home/autocode]: " APP_DIR
   fi
 fi
-APP_DIR=${APP_DIR:-/opt/autocoder}
+APP_DIR=${APP_DIR:-/home/autocode}
 
 if [[ -z "${APP_PORT:-}" ]]; then
   if [[ "${AUTOMATED_MODE}" -eq 0 ]]; then
