@@ -1,0 +1,57 @@
+# Sandbox Environment for Agent Workspaces
+# Provides isolated, ephemeral containers for agent testing and development
+
+FROM ubuntu:22.04
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install essential development tools
+RUN apt-get update && apt-get install -y \
+    # Build tools
+    build-essential \
+    cmake \
+    # Version control
+    git \
+    # Node.js and npm (LTS version)
+    curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    # Python
+    && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    # Additional utilities
+    wget \
+    vim \
+    nano \
+    jq \
+    unzip \
+    # Network tools
+    net-tools \
+    iputils-ping \
+    netcat \
+    # Process tools
+    htop \
+    procps \
+    # Clean up
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Create workspace directory
+RUN mkdir -p /workspace
+WORKDIR /workspace
+
+# Set up non-root user for security
+RUN useradd -m -s /bin/bash sandbox && \
+    chown -R sandbox:sandbox /workspace
+
+# Switch to non-root user
+USER sandbox
+
+# Default command keeps container running
+CMD ["tail", "-f", "/dev/null"]

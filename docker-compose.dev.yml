@@ -26,5 +26,7 @@ services:
       - /app/ui/node_modules
     env_file:
       - .env
+    environment:
+      - VITE_API_HOST=api
     ports:
       - "5173:5173"
