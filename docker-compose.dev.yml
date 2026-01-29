@@ -10,6 +10,7 @@ services:
       - .env
     volumes:
       - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock  # For sandbox management
     ports:
       - "8888:8888"
     depends_on:
