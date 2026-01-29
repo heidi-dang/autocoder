@@ -32,7 +32,7 @@ import { DependencyGraph } from "./components/DependencyGraph";
 import { KeyboardShortcutsHelp } from "./components/KeyboardShortcutsHelp";
 import { ThemeSelector } from "./components/ThemeSelector";
 import { getDependencyGraph } from "./lib/api";
-import { Loader2, Settings, Moon, Sun } from "lucide-react";
+import { Loader2, Settings, Moon, Sun, Server } from "lucide-react";
 import type { Feature } from "./lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -325,40 +325,20 @@ function App() {
                     status={wsState.devServerStatus}
                     url={wsState.devServerUrl}
                   />
-
-                  <Button
-                    onClick={() => setShowSettings(true)}
-                    variant="outline"
-                    size="sm"
-                    title="Settings (,)"
-                    aria-label="Open Settings"
-                  >
-                    <Settings size={18} />
-                  </Button>
-
-                  {/* Ollama Mode Indicator */}
-                  {settings?.ollama_mode && (
-                    <div
-                      className="flex items-center gap-1.5 px-2 py-1 bg-card rounded border-2 border-border shadow-sm"
-                      title="Using Ollama local models (configured via .env)"
-                    >
-                      <img src="/ollama.png" alt="Ollama" className="w-5 h-5" />
-                      <span className="text-xs font-bold text-foreground">
-                        Ollama
-                      </span>
-                    </div>
-                  )}
-
-                  {/* GLM Mode Badge */}
-                  {settings?.glm_mode && (
-                    <Badge
-                      className="bg-purple-500 text-white hover:bg-purple-600"
-                      title="Using GLM API (configured via .env)"
-                    >
-                      GLM
-                    </Badge>
-                  )}
                 </>
+              )}
+
+              {/* AI Provider Indicator - always visible */}
+              {settings?.ai_provider === "local" && settings?.ollama_model && (
+                <div
+                  className="flex items-center gap-1.5 px-2 py-1.5 bg-primary/10 rounded border border-primary/20"
+                  title={`Using Local Ollama: ${settings.ollama_model}`}
+                >
+                  <Server size={16} className="text-primary" />
+                  <span className="text-xs font-medium text-primary">
+                    {settings.ollama_model}
+                  </span>
+                </div>
               )}
 
               {/* Theme selector */}
@@ -367,6 +347,17 @@ function App() {
                 currentTheme={theme}
                 onThemeChange={setTheme}
               />
+
+              {/* AI Settings - always visible */}
+              <Button
+                onClick={() => setShowSettings(true)}
+                variant="outline"
+                size="sm"
+                title="AI Settings - Configure Cloud API or Local Ollama (,)"
+                aria-label="Open AI Settings"
+              >
+                <Settings size={18} />
+              </Button>
 
               {/* Dark mode toggle - always visible */}
               <Button
