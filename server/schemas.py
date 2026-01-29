@@ -404,6 +404,7 @@ class SettingsResponse(BaseModel):
     ai_provider: str = "cloud"  # "cloud" or "local"
     ollama_base_url: str = "http://localhost:11434"  # URL for local Ollama instance
     ollama_model: str | None = None  # Selected Ollama model
+    gemini_api_key: str | None = None  # Gemini API key (masked)
 
 
 class ModelsResponse(BaseModel):
@@ -420,6 +421,7 @@ class SettingsUpdate(BaseModel):
     ai_provider: str | None = None  # "cloud" or "local"
     ollama_base_url: str | None = None
     ollama_model: str | None = None
+    gemini_api_key: str | None = None
 
     @field_validator('model')
     @classmethod

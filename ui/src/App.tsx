@@ -36,7 +36,6 @@ import { Loader2, Settings, Moon, Sun, Server } from "lucide-react";
 import type { Feature } from "./lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { QuickChat } from "./components/QuickChat";
 import { setSentryProject } from "./lib/sentry";
 

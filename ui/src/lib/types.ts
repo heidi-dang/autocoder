@@ -575,6 +575,7 @@ export interface Settings {
   ai_provider: string; // "cloud" or "local"
   ollama_base_url: string;
   ollama_model: string | null;
+  gemini_api_key: string | null;
 }
 
 export interface SettingsUpdate {
@@ -584,6 +585,7 @@ export interface SettingsUpdate {
   ai_provider?: string;
   ollama_base_url?: string;
   ollama_model?: string;
+  gemini_api_key?: string;
 }
 
 // ============================================================================

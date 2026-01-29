@@ -41,6 +41,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [loadingOllamaModels, setLoadingOllamaModels] = useState(false);
   const [ollamaTestResult, setOllamaTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [localOllamaUrl, setLocalOllamaUrl] = useState("");
+  const [localGeminiKey, setLocalGeminiKey] = useState("");
 
   // Sync local state with settings
   useEffect(() => {
@@ -115,6 +116,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const handleOllamaModelChange = (model: string) => {
     if (!updateSettings.isPending) {
       updateSettings.mutate({ ollama_model: model });
+    }
+  };
+
+  const handleGeminiKeyChange = () => {
+    if (!updateSettings.isPending && localGeminiKey) {
+      updateSettings.mutate({ gemini_api_key: localGeminiKey });
     }
   };
 
@@ -388,6 +395,41 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           </button>
                         ))}
                     </div>
+                  </div>
+                )}
+                
+                {/* Gemini API Key Configuration */}
+                {models.some((model) => model.id.includes("gemini")) && (
+                  <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
+                    <Label className="text-xs font-medium">Gemini API Key</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="password"
+                        value={localGeminiKey}
+                        onChange={(e) => setLocalGeminiKey(e.target.value)}
+                        placeholder={settings.gemini_api_key ? "••••••••" : "Enter your Gemini API key"}
+                        className="flex-1 font-mono text-sm"
+                      />
+                      <Button
+                        onClick={handleGeminiKeyChange}
+                        disabled={isSaving || !localGeminiKey}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Save
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Get your API key from{" "}
+                      <a
+                        href="https://aistudio.google.com/app/apikey"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Google AI Studio
+                      </a>
+                    </p>
                   </div>
                 )}
               </div>

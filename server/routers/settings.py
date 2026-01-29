@@ -109,6 +109,14 @@ def _parse_bool(value: str | None, default: bool = False) -> bool:
 async def get_settings():
     """Get current global settings."""
     all_settings = get_all_settings()
+    
+    # Mask Gemini API key for security (show only last 4 chars)
+    gemini_key = all_settings.get("gemini_api_key")
+    masked_key = None
+    if gemini_key and len(gemini_key) > 4:
+        masked_key = "*" * (len(gemini_key) - 4) + gemini_key[-4:]
+    elif gemini_key:
+        masked_key = "****"
 
     return SettingsResponse(
         yolo_mode=_parse_yolo_mode(all_settings.get("yolo_mode")),
@@ -119,6 +127,7 @@ async def get_settings():
         ai_provider=all_settings.get("ai_provider", "cloud"),
         ollama_base_url=all_settings.get("ollama_base_url", "http://localhost:11434"),
         ollama_model=all_settings.get("ollama_model"),
+        gemini_api_key=masked_key,
     )
 
 
@@ -145,9 +154,24 @@ async def update_settings(update: SettingsUpdate):
     
     if update.ollama_model is not None:
         set_setting("ollama_model", update.ollama_model)
+    
+    if update.gemini_api_key is not None:
+        set_setting("gemini_api_key", update.gemini_api_key)
+        # Update environment variable for gemini_client
+        import os
+        os.environ["GEMINI_API_KEY"] = update.gemini_api_key
 
     # Return updated settings
     all_settings = get_all_settings()
+    
+    # Mask Gemini API key for security
+    gemini_key = all_settings.get("gemini_api_key")
+    masked_key = None
+    if gemini_key and len(gemini_key) > 4:
+        masked_key = "*" * (len(gemini_key) - 4) + gemini_key[-4:]
+    elif gemini_key:
+        masked_key = "****"
+    
     return SettingsResponse(
         yolo_mode=_parse_yolo_mode(all_settings.get("yolo_mode")),
         model=all_settings.get("model", DEFAULT_MODEL),
@@ -157,4 +181,5 @@ async def update_settings(update: SettingsUpdate):
         ai_provider=all_settings.get("ai_provider", "cloud"),
         ollama_base_url=all_settings.get("ollama_base_url", "http://localhost:11434"),
         ollama_model=all_settings.get("ollama_model"),
+        gemini_api_key=masked_key,
     )

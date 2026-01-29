@@ -293,6 +293,7 @@ const DEFAULT_SETTINGS: Settings = {
   ai_provider: "cloud",
   ollama_base_url: "http://localhost:11434",
   ollama_model: null,
+  gemini_api_key: null,
 };
 
 export function useAvailableModels() {

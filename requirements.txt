@@ -11,6 +11,7 @@ apscheduler>=3.10.0,<4.0.0
 pywinpty>=2.0.0; sys_platform == "win32"
 pyyaml>=6.0.0
 openai>=1.52.0
+google-genai>=0.3.0
 
 # Dev dependencies
 ruff>=0.8.0

@@ -33,6 +33,11 @@ logger = logging.getLogger(__name__)
 AVAILABLE_MODELS = [
     {"id": "claude-opus-4-5-20251101", "name": "Claude Opus 4.5"},
     {"id": "claude-sonnet-4-5-20250929", "name": "Claude Sonnet 4.5"},
+    {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro"},
+    {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash"},
+    {"id": "gemini-1.5-flash-8b", "name": "Gemini 1.5 Flash-8B"},
+    {"id": "gemini-2.0-flash-exp", "name": "Gemini 2.0 Flash (Experimental)"},
+    {"id": "gemini-1.0-pro", "name": "Gemini 1.0 Pro"},
 ]
 
 # List of valid model IDs (derived from AVAILABLE_MODELS)

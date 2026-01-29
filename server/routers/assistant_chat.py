@@ -382,9 +382,26 @@ async def quick_chat(request: QuickChatRequest):
                 ):
                     yield chunk
             else:
-                # Use Gemini (cloud)
-                async for chunk in gemini_client.stream_chat(request.message):
-                    yield chunk
+                # Use Gemini or Claude (cloud)
+                model = settings.get("model", "gemini-1.5-flash")
+                
+                # Check if Gemini API key is configured for Gemini models
+                if "gemini" in model:
+                    gemini_key = settings.get("gemini_api_key")
+                    if gemini_key:
+                        # Set environment variable for this request
+                        import os
+                        os.environ["GEMINI_API_KEY"] = gemini_key
+                    
+                    async for chunk in gemini_client.stream_chat(
+                        request.message,
+                        model=model
+                    ):
+                        yield chunk
+                else:
+                    # For Claude models, use existing implementation
+                    async for chunk in gemini_client.stream_chat(request.message):
+                        yield chunk
         except Exception as e:
             logger.exception("Quick chat error")
             yield f"\n\n[Error: {str(e)}]"
