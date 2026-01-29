@@ -290,6 +290,9 @@ const DEFAULT_SETTINGS: Settings = {
   glm_mode: false,
   ollama_mode: false,
   testing_agent_ratio: 1,
+  ai_provider: "cloud",
+  ollama_base_url: "http://localhost:11434",
+  ollama_model: null,
 };
 
 export function useAvailableModels() {

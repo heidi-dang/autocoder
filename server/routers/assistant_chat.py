@@ -7,11 +7,13 @@ WebSocket and REST endpoints for the read-only project assistant.
 
 import json
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from ..services.assistant_chat_session import (
@@ -27,6 +29,8 @@ from ..services.assistant_database import (
     get_conversation,
     get_conversations,
 )
+from .. import gemini_client
+from .. import ollama_client
 
 logger = logging.getLogger(__name__)
 
@@ -341,6 +345,48 @@ async def assistant_chat_websocket(websocket: WebSocket, project_name: str):
         except Exception:
             pass
 
-    finally:
-        # Don't remove session on disconnect - allow resume
-        pass
+
+# ============================================================================
+# Quick Chat Endpoint (No Project Context)
+# ============================================================================
+
+class QuickChatRequest(BaseModel):
+    """Request for quick chat."""
+    message: str
+
+
+@router.post("/quick-chat")
+async def quick_chat(request: QuickChatRequest):
+    """
+    Stream a quick chat response without project context.
+    Uses configured AI provider (cloud or local Ollama).
+    """
+    import sys
+    root = Path(__file__).parent.parent.parent
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    
+    from registry import get_all_settings
+    
+    settings = get_all_settings()
+    ai_provider = settings.get("ai_provider", "cloud")
+    
+    async def generate():
+        try:
+            if ai_provider == "local":
+                # Use Ollama
+                ollama_model = settings.get("ollama_model", "llama3.2")
+                async for chunk in ollama_client.stream_chat(
+                    request.message,
+                    model=ollama_model,
+                ):
+                    yield chunk
+            else:
+                # Use Gemini (cloud)
+                async for chunk in gemini_client.stream_chat(request.message):
+                    yield chunk
+        except Exception as e:
+            logger.exception("Quick chat error")
+            yield f"\n\n[Error: {str(e)}]"
+    
+    return StreamingResponse(generate(), media_type="text/plain")

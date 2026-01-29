@@ -401,6 +401,9 @@ class SettingsResponse(BaseModel):
     glm_mode: bool = False  # True if GLM API is configured via .env
     ollama_mode: bool = False  # True if Ollama API is configured via .env
     testing_agent_ratio: int = 1  # Regression testing agents (0-3)
+    ai_provider: str = "cloud"  # "cloud" or "local"
+    ollama_base_url: str = "http://localhost:11434"  # URL for local Ollama instance
+    ollama_model: str | None = None  # Selected Ollama model
 
 
 class ModelsResponse(BaseModel):
@@ -414,12 +417,22 @@ class SettingsUpdate(BaseModel):
     yolo_mode: bool | None = None
     model: str | None = None
     testing_agent_ratio: int | None = None  # 0-3
+    ai_provider: str | None = None  # "cloud" or "local"
+    ollama_base_url: str | None = None
+    ollama_model: str | None = None
 
     @field_validator('model')
     @classmethod
     def validate_model(cls, v: str | None) -> str | None:
         if v is not None and v not in VALID_MODELS:
             raise ValueError(f"Invalid model. Must be one of: {VALID_MODELS}")
+        return v
+    
+    @field_validator('ai_provider')
+    @classmethod
+    def validate_ai_provider(cls, v: str | None) -> str | None:
+        if v is not None and v not in ["cloud", "local"]:
+            raise ValueError("ai_provider must be 'cloud' or 'local'")
         return v
 
     @field_validator('testing_agent_ratio')

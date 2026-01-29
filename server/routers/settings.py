@@ -14,6 +14,7 @@ from pathlib import Path
 from fastapi import APIRouter
 
 from ..schemas import ModelInfo, ModelsResponse, SettingsResponse, SettingsUpdate
+from .. import ollama_client
 
 # Mimetype fix for Windows - must run before StaticFiles is mounted
 mimetypes.add_type("text/javascript", ".js", True)
@@ -64,6 +65,29 @@ async def get_available_models():
     )
 
 
+@router.get("/ollama-models")
+async def get_ollama_models():
+    """Get list of available models from Ollama instance."""
+    models = await ollama_client.get_available_models()
+    return {
+        "models": [
+            {
+                "name": model.get("name", ""),
+                "size": model.get("size", 0),
+                "modified_at": model.get("modified_at", ""),
+            }
+            for model in models
+        ]
+    }
+
+
+@router.post("/test-ollama")
+async def test_ollama_connection():
+    """Test connection to Ollama instance."""
+    success, message = await ollama_client.test_connection()
+    return {"success": success, "message": message}
+
+
 def _parse_int(value: str | None, default: int) -> int:
     """Parse integer setting with default fallback."""
     if value is None:
@@ -92,6 +116,9 @@ async def get_settings():
         glm_mode=_is_glm_mode(),
         ollama_mode=_is_ollama_mode(),
         testing_agent_ratio=_parse_int(all_settings.get("testing_agent_ratio"), 1),
+        ai_provider=all_settings.get("ai_provider", "cloud"),
+        ollama_base_url=all_settings.get("ollama_base_url", "http://localhost:11434"),
+        ollama_model=all_settings.get("ollama_model"),
     )
 
 
@@ -106,6 +133,18 @@ async def update_settings(update: SettingsUpdate):
 
     if update.testing_agent_ratio is not None:
         set_setting("testing_agent_ratio", str(update.testing_agent_ratio))
+    
+    if update.ai_provider is not None:
+        set_setting("ai_provider", update.ai_provider)
+    
+    if update.ollama_base_url is not None:
+        set_setting("ollama_base_url", update.ollama_base_url)
+        # Update environment variable for ollama_client
+        import os
+        os.environ["OLLAMA_BASE_URL"] = update.ollama_base_url
+    
+    if update.ollama_model is not None:
+        set_setting("ollama_model", update.ollama_model)
 
     # Return updated settings
     all_settings = get_all_settings()
@@ -115,4 +154,7 @@ async def update_settings(update: SettingsUpdate):
         glm_mode=_is_glm_mode(),
         ollama_mode=_is_ollama_mode(),
         testing_agent_ratio=_parse_int(all_settings.get("testing_agent_ratio"), 1),
+        ai_provider=all_settings.get("ai_provider", "cloud"),
+        ollama_base_url=all_settings.get("ollama_base_url", "http://localhost:11434"),
+        ollama_model=all_settings.get("ollama_model"),
     )

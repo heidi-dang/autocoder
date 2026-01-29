@@ -37,6 +37,7 @@ import type { Feature } from "./lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { QuickChat } from "./components/QuickChat";
 import { setSentryProject } from "./lib/sentry";
 
 const STORAGE_KEY = "autocoder-selected-project";
@@ -388,14 +389,19 @@ function App() {
         style={{ paddingBottom: debugOpen ? debugPanelHeight + 32 : undefined }}
       >
         {!selectedProject ? (
-          <div className="text-center mt-12">
-            <h2 className="font-display text-2xl font-bold mb-2">
-              Welcome to AutoCoder
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              Select a project from the dropdown above or create a new one to
-              get started.
-            </p>
+          <div className="space-y-8 mt-12">
+            <div className="text-center">
+              <h2 className="font-display text-2xl font-bold mb-2">
+                Welcome to AutoCoder
+              </h2>
+              <p className="text-muted-foreground mb-4">
+                Select a project from the dropdown above or create a new one to
+                get started.
+              </p>
+            </div>
+            
+            {/* Quick Chat */}
+            <QuickChat />
           </div>
         ) : (
           <div className="space-y-8">

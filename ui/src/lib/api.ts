@@ -456,6 +456,21 @@ export async function updateSettings(
   });
 }
 
+export async function getOllamaModels(): Promise<{
+  models: Array<{ name: string; size: number; modified_at: string }>;
+}> {
+  return fetchJSON("/settings/ollama-models");
+}
+
+export async function testOllamaConnection(): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  return fetchJSON("/settings/test-ollama", {
+    method: "POST",
+  });
+}
+
 // ============================================================================
 // Dev Server API
 // ============================================================================

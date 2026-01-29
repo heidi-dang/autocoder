@@ -572,12 +572,18 @@ export interface Settings {
   glm_mode: boolean;
   ollama_mode: boolean;
   testing_agent_ratio: number; // Regression testing agents (0-3)
+  ai_provider: string; // "cloud" or "local"
+  ollama_base_url: string;
+  ollama_model: string | null;
 }
 
 export interface SettingsUpdate {
   yolo_mode?: boolean;
   model?: string;
   testing_agent_ratio?: number;
+  ai_provider?: string;
+  ollama_base_url?: string;
+  ollama_model?: string;
 }
 
 // ============================================================================
