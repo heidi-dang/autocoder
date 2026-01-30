@@ -1,0 +1,13 @@
+== autocoder logs ==
+autocoder-1  | {"asctime": "2026-01-30 01:07:37,317", "levelname": "INFO", "name": "uvicorn.error", "message": "Started server process [1]", "request_id": null, "color_message": "Started server process [\u001b[36m%d\u001b[0m]"}
+autocoder-1  | {"asctime": "2026-01-30 01:07:37,317", "levelname": "INFO", "name": "uvicorn.error", "message": "Started server process [1]", "request_id": null, "color_message": "Started server process [\u001b[36m%d\u001b[0m]"}
+autocoder-1  | {"asctime": "2026-01-30 01:07:37,317", "levelname": "INFO", "name": "uvicorn.error", "message": "Waiting for application startup.", "request_id": null}
+autocoder-1  | {"asctime": "2026-01-30 01:07:37,317", "levelname": "INFO", "name": "uvicorn.error", "message": "Waiting for application startup.", "request_id": null}
+autocoder-1  | {"asctime": "2026-01-30 01:07:37,373", "levelname": "INFO", "name": "apscheduler.scheduler", "message": "Scheduler started", "request_id": null}
+autocoder-1  | {"asctime": "2026-01-30 01:07:37,373", "levelname": "INFO", "name": "server.services.scheduler_service", "message": "Scheduler service started", "request_id": null}
+autocoder-1  | {"asctime": "2026-01-30 01:07:37,376", "levelname": "INFO", "name": "uvicorn.error", "message": "Application startup complete.", "request_id": null}
+autocoder-1  | {"asctime": "2026-01-30 01:07:37,376", "levelname": "INFO", "name": "uvicorn.error", "message": "Application startup complete.", "request_id": null}
+autocoder-1  | {"asctime": "2026-01-30 01:07:37,378", "levelname": "INFO", "name": "uvicorn.error", "message": "Uvicorn running on http://0.0.0.0:8888 (Press CTRL+C to quit)", "request_id": null, "color_message": "Uvicorn running on \u001b[1m%s://%s:%d\u001b[0m (Press CTRL+C to quit)"}
+autocoder-1  | {"asctime": "2026-01-30 01:07:37,378", "levelname": "INFO", "name": "uvicorn.error", "message": "Uvicorn running on http://0.0.0.0:8888 (Press CTRL+C to quit)", "request_id": null, "color_message": "Uvicorn running on \u001b[1m%s://%s:%d\u001b[0m (Press CTRL+C to quit)"}
+autocoder-1  | {"asctime": "2026-01-30 01:07:52,147", "levelname": "INFO", "name": "uvicorn.access", "message": "172.18.0.1:46510 - \"GET /api/health HTTP/1.1\" 200", "request_id": null}
+autocoder-1  | {"asctime": "2026-01-30 01:07:52,156", "levelname": "INFO", "name": "uvicorn.access", "message": "172.18.0.1:46520 - \"GET /api/health HTTP/1.1\" 200", "request_id": null}

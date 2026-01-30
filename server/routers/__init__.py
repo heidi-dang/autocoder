@@ -34,7 +34,3 @@ __all__ = [
     "sandbox_router",
     "ollama_manager_router",
 ]
-    "settings_router",
-    "terminal_router",
-    "sandbox_router",
-]

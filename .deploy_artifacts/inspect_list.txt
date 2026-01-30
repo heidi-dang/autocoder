@@ -1,0 +1,306 @@
+== inspect containers ==
+--- 640b16496d0dc2850567cb3bf8235c604aeb2c363c418497bde5b57225061ec2 ---
+[
+    {
+        "Id": "640b16496d0dc2850567cb3bf8235c604aeb2c363c418497bde5b57225061ec2",
+        "Created": "2026-01-30T01:07:34.536469064Z",
+        "Path": "uvicorn",
+        "Args": [
+            "server.main:app",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8888"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 49174,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-01-30T01:07:34.659222918Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:46a093609debaee9e73a082b87a6ceef65e15686e361262740b7c45e765a5b93",
+        "ResolvConfPath": "/var/lib/docker/containers/640b16496d0dc2850567cb3bf8235c604aeb2c363c418497bde5b57225061ec2/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/640b16496d0dc2850567cb3bf8235c604aeb2c363c418497bde5b57225061ec2/hostname",
+        "HostsPath": "/var/lib/docker/containers/640b16496d0dc2850567cb3bf8235c604aeb2c363c418497bde5b57225061ec2/hosts",
+        "LogPath": "/var/lib/docker/containers/640b16496d0dc2850567cb3bf8235c604aeb2c363c418497bde5b57225061ec2/640b16496d0dc2850567cb3bf8235c604aeb2c363c418497bde5b57225061ec2-json.log",
+        "Name": "/autocoder-autocoder-1",
+        "RestartCount": 0,
+        "Driver": "overlay2",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": [
+                "autocoder_autocoder-data:/root/.autocoder:rw",
+                "/opt/autocoder/projects:/projects:rw",
+                "/opt/autocoder:/workspace:ro"
+            ],
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "autocoder_default",
+            "PortBindings": {
+                "8888/tcp": [
+                    {
+                        "HostIp": "",
+                        "HostPort": "8888"
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "unless-stopped",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": null,
+            "DnsSearch": null,
+            "ExtraHosts": [],
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": null,
+            "BlkioDeviceReadBps": null,
+            "BlkioDeviceWriteBps": null,
+            "BlkioDeviceReadIOps": null,
+            "BlkioDeviceWriteIOps": null,
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": null,
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/asound",
+                "/proc/acpi",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/sys/firmware",
+                "/sys/devices/virtual/powercap",
+                "/sys/devices/system/cpu/cpu0/thermal_throttle",
+                "/sys/devices/system/cpu/cpu1/thermal_throttle",
+                "/sys/devices/system/cpu/cpu2/thermal_throttle",
+                "/sys/devices/system/cpu/cpu3/thermal_throttle",
+                "/sys/devices/system/cpu/cpu4/thermal_throttle",
+                "/sys/devices/system/cpu/cpu5/thermal_throttle",
+                "/sys/devices/system/cpu/cpu6/thermal_throttle",
+                "/sys/devices/system/cpu/cpu7/thermal_throttle",
+                "/sys/devices/system/cpu/cpu8/thermal_throttle",
+                "/sys/devices/system/cpu/cpu9/thermal_throttle",
+                "/sys/devices/system/cpu/cpu10/thermal_throttle",
+                "/sys/devices/system/cpu/cpu11/thermal_throttle"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "GraphDriver": {
+            "Data": {
+                "ID": "640b16496d0dc2850567cb3bf8235c604aeb2c363c418497bde5b57225061ec2",
+                "LowerDir": "/var/lib/docker/overlay2/e34c6f28d23de5c1ed2f03dc0efaf6ba11fdd1e875b2862705af01e80b4c3708-init/diff:/var/lib/docker/overlay2/8497gvsb2c46qb7w83r9wf52o/diff:/var/lib/docker/overlay2/m01kzczggbnf6m7e1fgr1aypq/diff:/var/lib/docker/overlay2/0ojjr3s8b3vv91k4dclbo04u7/diff:/var/lib/docker/overlay2/8kyffgn6r6ttg5uife1dxtrie/diff:/var/lib/docker/overlay2/jvoua123th1aas3usoiqjzamb/diff:/var/lib/docker/overlay2/rhcyd2x12tk8fl2akyhskm3kg/diff:/var/lib/docker/overlay2/003ae24758f58be48189116dbe41d39f5688b8088a43a1142655b60c464fb007/diff:/var/lib/docker/overlay2/8158f910118191f1ef986d45ac97a5424070b01079dfb3464aefa8061baba2d6/diff:/var/lib/docker/overlay2/cc8bb43924bf2cd8a161ff24dd3ac1a45f06f4d7e3b72cdee9603756df35dafa/diff:/var/lib/docker/overlay2/4ffcd46ab73be981d2aa84faaf69c568332bfe0533fedff451e93331ab8bf574/diff",
+                "MergedDir": "/var/lib/docker/overlay2/e34c6f28d23de5c1ed2f03dc0efaf6ba11fdd1e875b2862705af01e80b4c3708/merged",
+                "UpperDir": "/var/lib/docker/overlay2/e34c6f28d23de5c1ed2f03dc0efaf6ba11fdd1e875b2862705af01e80b4c3708/diff",
+                "WorkDir": "/var/lib/docker/overlay2/e34c6f28d23de5c1ed2f03dc0efaf6ba11fdd1e875b2862705af01e80b4c3708/work"
+            },
+            "Name": "overlay2"
+        },
+        "Mounts": [
+            {
+                "Type": "volume",
+                "Name": "autocoder_autocoder-data",
+                "Source": "/var/lib/docker/volumes/autocoder_autocoder-data/_data",
+                "Destination": "/root/.autocoder",
+                "Driver": "local",
+                "Mode": "rw",
+                "RW": true,
+                "Propagation": ""
+            },
+            {
+                "Type": "bind",
+                "Source": "/opt/autocoder/projects",
+                "Destination": "/projects",
+                "Mode": "rw",
+                "RW": true,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/opt/autocoder",
+                "Destination": "/workspace",
+                "Mode": "ro",
+                "RW": false,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "640b16496d0d",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": true,
+            "AttachStderr": true,
+            "ExposedPorts": {
+                "8888/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "AUTOCODER_ALLOWED_ROOTS=/projects,/workspace",
+                "DOMAIN=heidichat.duckdns.org",
+                "DUCKDNS_TOKEN=eab497dd-d4c9-4767-aa72-0d0cfff6d1a0",
+                "LETSENCRYPT_EMAIL=heidi.dang.dev@gmail.com",
+                "AUTOCODER_ALLOW_REMOTE=1",
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=A035C8C19219BA821ECEA86B64E628F8D684696D",
+                "PYTHON_VERSION=3.11.14",
+                "PYTHON_SHA256=8d3ed8ec5c88c1c95f5e558612a725450d2452813ddad5e58fdb1a53b1209b78",
+                "PYTHONUNBUFFERED=1",
+                "PYTHONDONTWRITEBYTECODE=1"
+            ],
+            "Cmd": [
+                "uvicorn",
+                "server.main:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8888"
+            ],
+            "Image": "autocoder-local:latest",
+            "Volumes": null,
+            "WorkingDir": "/app",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {
+                "com.docker.compose.config-hash": "3f9cd3f06e7c57dea73851f58fca59e0806c9094bffc577d8f4e6631741b3748",
+                "com.docker.compose.container-number": "1",
+                "com.docker.compose.depends_on": "",
+                "com.docker.compose.image": "sha256:46a093609debaee9e73a082b87a6ceef65e15686e361262740b7c45e765a5b93",
+                "com.docker.compose.oneoff": "False",
+                "com.docker.compose.project": "autocoder",
+                "com.docker.compose.project.config_files": "/home/heidi/Desktop/autocoder/docker-compose.yml",
+                "com.docker.compose.project.working_dir": "/home/heidi/Desktop/autocoder",
+                "com.docker.compose.replace": "6e82d386a69de7b2f4835297159a27b524fe20acd3191de71c23787d81402a88",
+                "com.docker.compose.service": "autocoder",
+                "com.docker.compose.version": "2.37.1"
+            }
+        },
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "4f8e848a3b0944adc940bda69feb0b4f936a6e283fa07878364eeab11f029952",
+            "SandboxKey": "/var/run/docker/netns/4f8e848a3b09",
+            "Ports": {
+                "8888/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "8888"
+                    },
+                    {
+                        "HostIp": "::",
+                        "HostPort": "8888"
+                    }
+                ]
+            },
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "",
+            "Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "",
+            "IPPrefixLen": 0,
+            "IPv6Gateway": "",
+            "MacAddress": "",
+            "Networks": {
+                "autocoder_default": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": [
+                        "autocoder-autocoder-1",
+                        "autocoder"
+                    ],
+                    "MacAddress": "82:24:38:36:da:2c",
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "206d71bbfb58e7a8c8907a7e866f79fb30ba435eca7a35a48c55a9eeefa78817",
+                    "EndpointID": "9310585a6ce543f6803f06cae780385500c5d9db22a5aae12f09f767e9cf2cc1",
+                    "Gateway": "172.18.0.1",
+                    "IPAddress": "172.18.0.2",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "autocoder-autocoder-1",
+                        "autocoder",
+                        "640b16496d0d"
+                    ]
+                }
+            }
+        }
+    }
+]

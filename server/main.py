@@ -28,6 +28,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request, Response, WebSocket
+import base64
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -210,6 +211,15 @@ configure_tracing(app)
 # Set by start_ui.py when --host is not 127.0.0.1
 ALLOW_REMOTE = os.environ.get("AUTOCODER_ALLOW_REMOTE", "").lower() in ("1", "true", "yes")
 
+# Authentication config (optional)
+AUTH_ENABLED = os.environ.get("AUTOCODER_AUTH_ENABLED", "").lower() in ("1", "true", "yes")
+AUTH_TYPE = os.environ.get("AUTOCODER_AUTH_TYPE", "basic").lower()
+AUTH_USER = os.environ.get("AUTOCODER_AUTH_USER", "")
+AUTH_PASS = os.environ.get("AUTOCODER_AUTH_PASS", "")
+AUTOCODER_API_KEY = os.environ.get("AUTOCODER_API_KEY", "")
+AUTH_ROOT_USER = os.environ.get("AUTOCODER_ROOT_USER", "root")
+AUTH_ROOT_PASS = os.environ.get("AUTOCODER_ROOT_PASS", "")
+
 # CORS - allow all origins when remote access is enabled, otherwise localhost only
 if ALLOW_REMOTE:
     app.add_middleware(
@@ -268,6 +278,71 @@ if not ALLOW_REMOTE:
         if client_host not in ("127.0.0.1", "::1", "localhost", None):
             raise HTTPException(status_code=403, detail="Localhost access only")
 
+        return await call_next(request)
+
+
+# ============================================================================
+# Optional Authentication Middleware
+# ============================================================================
+if AUTH_ENABLED:
+    @app.middleware("http")
+    async def auth_middleware(request: Request, call_next):
+        """Require HTTP Basic or token auth for non-public endpoints when enabled.
+
+        - Basic: set `AUTOCODER_AUTH_USER` and `AUTOCODER_AUTH_PASS`.
+        - Token: set `AUTOCODER_AUTH_TYPE=token` and `AUTOCODER_API_KEY`.
+        """
+        # Allow some health/readiness/metrics endpoints unauthenticated
+        public_prefixes = ("/health", "/readiness", "/metrics", "/api/setup/status")
+        path = request.url.path or "/"
+        for p in public_prefixes:
+            if path.startswith(p):
+                return await call_next(request)
+
+        # Allow static assets (frontend) to be protected as well if desired
+
+        auth_header = request.headers.get("Authorization", "")
+
+        if AUTH_TYPE == "basic":
+            if not auth_header.startswith("Basic "):
+                return Response(status_code=401, headers={"WWW-Authenticate": "Basic realm=\"Autocoder\""})
+            try:
+                b64 = auth_header.split(" ", 1)[1]
+                decoded = base64.b64decode(b64).decode("utf-8", errors="ignore")
+                user, pwd = decoded.split(":", 1)
+            except Exception:
+                return Response(status_code=401, headers={"WWW-Authenticate": "Basic realm=\"Autocoder\""})
+
+            # Accept either the regular user credentials or the root credentials
+            valid_regular = (user == AUTH_USER and pwd == AUTH_PASS and AUTH_USER and AUTH_PASS)
+            valid_root = (user == AUTH_ROOT_USER and pwd == AUTH_ROOT_PASS and AUTH_ROOT_USER and AUTH_ROOT_PASS)
+            if not (valid_regular or valid_root):
+                return Response(status_code=403)
+
+            # record authenticated user on the request state for downstream
+            try:
+                # normalize root username to literal 'root' if configured as such
+                request.state.autocoder_user = user
+            except Exception:
+                pass
+            return await call_next(request)
+
+        if AUTH_TYPE == "token":
+            token = ""
+            if auth_header.startswith("Bearer "):
+                token = auth_header.split(" ", 1)[1]
+            else:
+                token = request.headers.get("X-AUTOCODER-API-KEY", "")
+            if AUTOCODER_API_KEY and token == AUTOCODER_API_KEY:
+                try:
+                    # token-based auth has no username by default
+                    request.state.autocoder_user = "token"
+                except Exception:
+                    pass
+                return await call_next(request)
+            return Response(status_code=401)
+
+        # Unknown auth type - allow by default
         return await call_next(request)
 
 @app.middleware("http")

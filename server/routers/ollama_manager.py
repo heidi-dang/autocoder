@@ -15,7 +15,7 @@ from typing import Optional
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from server.ollama_client import get_available_models, get_ollama_base_url
 
@@ -29,10 +29,10 @@ class OllamaStatus(BaseModel):
     version: Optional[str] = None
     base_url: str
     models_count: int
-    models: list[dict] = []
+    models: list[dict] = Field(default_factory=list)
     connection_url: str  # URL that should work from Docker
-    issues: list[str] = []
-    recommendations: list[str] = []
+    issues: list[str] = Field(default_factory=list)
+    recommendations: list[str] = Field(default_factory=list)
 
 
 class InstallRequest(BaseModel):

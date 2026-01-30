@@ -1,0 +1,4 @@
+== docker ps ==
+CONTAINER ID                                                       IMAGE                                COMMAND                                                CREATED         STATUS                    PORTS                                         NAMES
+640b16496d0dc2850567cb3bf8235c604aeb2c363c418497bde5b57225061ec2   autocoder-local:latest               "uvicorn server.main:app --host 0.0.0.0 --port 8888"   5 minutes ago   Up 5 minutes              0.0.0.0:8888->8888/tcp, [::]:8888->8888/tcp   autocoder-autocoder-1
+bca868e8dab1506e3ef1953bff69a6f23c83d9282bc1c97d4e54b49dc7faee38   ghcr.io/open-webui/open-webui:main   "bash start.sh"                                        10 hours ago    Up 53 minutes (healthy)                                                 open-webui

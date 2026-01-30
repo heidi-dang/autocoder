@@ -12,6 +12,12 @@ services:
       # Allow overriding via AUTOCODER_ALLOW_REMOTE=0/false in .env.
       AUTOCODER_ALLOW_REMOTE: ${AUTOCODER_ALLOW_REMOTE:-1}
       AUTOCODER_ALLOWED_ROOTS: /projects,/workspace
+      # Allow AutoCoder to reach a host-running Ollama instance on Linux
+      # This uses host.docker.internal which resolves to the host gateway when
+      # `host-gateway` is provided via extra_hosts (supported on Docker 20.10+).
+      # Default to Docker network gateway which usually maps to the host
+      # (useful when Ollama runs on the host at port 11434).
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://172.18.0.1:11434}
     ports:
       - "8888:8888"
     restart: unless-stopped
@@ -19,6 +25,8 @@ services:
       - autocoder-data:/root/.autocoder
       - /opt/autocoder/projects:/projects
       - /opt/autocoder:/workspace:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: uvicorn server.main:app --host 0.0.0.0 --port 8888
 
 volumes:

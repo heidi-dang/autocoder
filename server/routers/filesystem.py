@@ -12,7 +12,7 @@ import re
 import sys
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from ..schemas import (
     CreateDirectoryRequest,
@@ -41,6 +41,13 @@ def _parse_allowed_roots() -> list[Path]:
         except Exception as exc:  # pragma: no cover - best-effort parsing
             logger.warning("Ignored invalid allowed root %r: %s", part, exc)
     return roots
+
+
+def _allowed_roots_display() -> str:
+    """Human-readable representation of configured allowed roots."""
+    if not ALLOWED_ROOTS:
+        return "(none)"
+    return ", ".join(str(p) for p in ALLOWED_ROOTS)
 
 
 ALLOWED_ROOTS = _parse_allowed_roots()
@@ -229,6 +236,7 @@ def is_unc_path(path_str: str) -> bool:
 async def list_directory(
     path: str | None = Query(None, description="Directory path to list (defaults to home)"),
     show_hidden: bool = Query(False, description="Include hidden files"),
+    request: Request | None = None,
 ):
     """
     List contents of a directory.
@@ -255,12 +263,21 @@ async def list_directory(
     except (OSError, ValueError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid path: {e}")
 
-    # Security: Check if path is blocked
-    if is_path_blocked(target):
+    # Security: Check if path is blocked (allow superuser 'root')
+    is_super = False
+    try:
+        is_super = getattr(request.state, "autocoder_user", None) == "root"
+    except Exception:
+        is_super = False
+
+    if not is_super and is_path_blocked(target):
         logger.warning("Blocked access to restricted path: %s", target)
         raise HTTPException(
             status_code=403,
-            detail="Access to this directory is not allowed"
+            detail=(
+                f"Access to this directory is not allowed. "
+                f"Allowed roots: {_allowed_roots_display()}"
+            ),
         )
 
     # Check if path exists and is a directory
@@ -287,8 +304,8 @@ async def list_directory(
             if hidden and not show_hidden:
                 continue
 
-            # Security: Skip if item path is blocked
-            if is_path_blocked(item):
+            # Security: Skip if item path is blocked (unless superuser)
+            if not is_super and is_path_blocked(item):
                 continue
 
             # Only include directories for folder browsing
@@ -324,8 +341,8 @@ async def list_directory(
     parent_path = None
     if target != target.parent:  # Not at root
         parent = target.parent
-        # Don't expose parent if it's blocked
-        if not is_path_blocked(parent):
+        # Don't expose parent if it's blocked (unless superuser)
+        if is_super or not is_path_blocked(parent):
             parent_path = parent.as_posix()
 
     # Get drives on Windows
@@ -397,7 +414,7 @@ def get_windows_drives() -> list[DriveInfo]:
 
 
 @router.post("/validate", response_model=PathValidationResponse)
-async def validate_path(path: str = Query(..., description="Path to validate")):
+async def validate_path(path: str = Query(..., description="Path to validate"), request: Request | None = None):
     """
     Validate if a path is accessible and writable.
 
@@ -426,15 +443,24 @@ async def validate_path(path: str = Query(..., description="Path to validate")):
             message=f"Invalid path: {e}",
         )
 
-    # Security: Check if blocked
-    if is_path_blocked(target):
+    # Security: Check if blocked (allow superuser 'root')
+    is_super = False
+    try:
+        is_super = bool(request and getattr(request.state, "autocoder_user", None) == "root")
+    except Exception:
+        is_super = False
+
+    if not is_super and is_path_blocked(target):
         return PathValidationResponse(
             valid=False,
             exists=target.exists(),
             is_directory=target.is_dir() if target.exists() else False,
             can_read=False,
             can_write=False,
-            message="Access to this directory is not allowed",
+            message=(
+                "Access to this directory is not allowed. "
+                f"Allowed roots: {_allowed_roots_display()}"
+            ),
         )
 
     exists = target.exists()
@@ -471,7 +497,7 @@ async def validate_path(path: str = Query(..., description="Path to validate")):
 
 
 @router.post("/create-directory")
-async def create_directory(request: CreateDirectoryRequest):
+async def create_directory(request: CreateDirectoryRequest, http_request: Request | None = None):
     """
     Create a new directory inside a parent directory.
 
@@ -506,8 +532,14 @@ async def create_directory(request: CreateDirectoryRequest):
     except (OSError, ValueError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid parent path: {e}")
 
-    # Security: Check if parent is blocked
-    if is_path_blocked(parent):
+    # Security: Check if parent is blocked (allow superuser 'root')
+    is_super = False
+    try:
+        is_super = bool(http_request and getattr(http_request.state, "autocoder_user", None) == "root")
+    except Exception:
+        is_super = False
+
+    if not is_super and is_path_blocked(parent):
         raise HTTPException(
             status_code=403,
             detail="Cannot create directory in this location"
