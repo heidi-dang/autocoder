@@ -6,10 +6,10 @@ repos:
   - id: ruff
     name: ruff (lint)
     args: [--fix, --unsafe-fixes]
-    stages: [commit]
+    stages: [pre-commit]
   - id: ruff-format
     name: ruff (format)
-    stages: [commit]
+    stages: [pre-commit]
 
   # Common fixes (trailing whitespace, EOF, etc.)
 - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -17,28 +17,28 @@ repos:
   hooks:
   - id: detect-private-key
     name: Detect private keys
-    stages: [commit]
+    stages: [pre-commit]
   - id: check-added-large-files
     name: Check for large files
     args: [--maxkb=1000]
-    stages: [commit]
+    stages: [pre-commit]
   - id: end-of-file-fixer
     name: Fix end of file
-    stages: [commit]
+    stages: [pre-commit]
   - id: trailing-whitespace
     name: Trim trailing whitespace
-    stages: [commit]
+    stages: [pre-commit]
   - id: check-yaml
     name: Check YAML
     args: [--unsafe]
-    stages: [commit]
+    stages: [pre-commit]
   - id: check-json
     name: Check JSON
     exclude: ^ui/tsconfig.*\.json$
-    stages: [commit]
+    stages: [pre-commit]
   - id: check-merge-conflict
     name: Check merge conflicts
-    stages: [commit]
+    stages: [pre-commit]
 
   # YAML formatting
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
@@ -47,7 +47,7 @@ repos:
   - id: pretty-format-yaml
     name: Format YAML
     args: [--autofix]
-    stages: [commit]
+    stages: [pre-commit]
 
 ci:
   autofix_commit_msg: '[pre-commit.ci] auto fixes from ruff'
