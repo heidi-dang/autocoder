@@ -398,6 +398,13 @@ class SettingsResponse(BaseModel):
     glm_mode: bool = False  # True if GLM API is configured via .env
     ollama_mode: bool = False  # True if Ollama API is configured via .env
     testing_agent_ratio: int = 1  # Regression testing agents (0-3)
+    
+    # Sandbox settings
+    use_sandbox: bool = False
+    sandbox_image_size: str = "10gb"
+    sandbox_memory: str = "4gb"
+    sandbox_timeout: str = "3600"
+    sandbox_auto_cleanup: bool = True
 
 
 class ModelsResponse(BaseModel):
@@ -411,6 +418,13 @@ class SettingsUpdate(BaseModel):
     yolo_mode: bool | None = None
     model: str | None = None
     testing_agent_ratio: int | None = None  # 0-3
+    
+    # Sandbox settings
+    use_sandbox: bool | None = None
+    sandbox_image_size: str | None = None
+    sandbox_memory: str | None = None
+    sandbox_timeout: str | None = None
+    sandbox_auto_cleanup: bool | None = None
 
     @field_validator('model')
     @classmethod

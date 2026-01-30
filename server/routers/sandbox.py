@@ -244,3 +244,77 @@ async def cleanup_stopped_sandboxes(hours: int = 24):
     count = await manager.cleanup_stopped_sandboxes(hours)
 
     return ActionResponse(success=True, message=f"Cleaned up {count} stopped sandbox(es)")
+
+
+class SandboxTestRequest(BaseModel):
+    """Request schema for sandbox test."""
+    use_sandbox: bool
+    sandbox_image_size: str = "10gb"
+    sandbox_memory: str = "4gb"
+
+
+@router.post("/test")
+async def test_sandbox(request: SandboxTestRequest):
+    """
+    Test sandbox configuration.
+    
+    Verifies that Docker is available and the sandbox can be created with the specified settings.
+    """
+    try:
+        if not request.use_sandbox:
+            return {
+                "success": True,
+                "message": "Direct execution mode - no sandbox testing required."
+            }
+        
+        # Check if Docker is available
+        import subprocess
+        
+        result = subprocess.run(
+            ["docker", "info"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        if result.returncode != 0:
+            return {
+                "success": False,
+                "message": "Docker is not available or not running. Please ensure Docker is installed and running."
+            }
+        
+        # Try to pull a test image or verify Docker can create containers
+        test_result = subprocess.run(
+            ["docker", "run", "--rm", "--memory", request.sandbox_memory, "alpine", "echo", "Sandbox test successful"],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if test_result.returncode == 0:
+            return {
+                "success": True,
+                "message": f"Sandbox test passed! Docker is working with {request.sandbox_memory} memory limit."
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"Sandbox test failed: {test_result.stderr or 'Unknown error'}"
+            }
+            
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "message": "Docker command timed out. Docker may be unresponsive."
+        }
+    except FileNotFoundError:
+        return {
+            "success": False,
+            "message": "Docker command not found. Please install Docker first."
+        }
+    except Exception as e:
+        logger.error(f"Sandbox test failed: {e}")
+        return {
+            "success": False,
+            "message": f"Sandbox test failed: {str(e)}"
+        }

@@ -128,6 +128,12 @@ async def get_settings():
         ollama_base_url=all_settings.get("ollama_base_url", "http://localhost:11434"),
         ollama_model=all_settings.get("ollama_model"),
         gemini_api_key=masked_key,
+        # Sandbox settings
+        use_sandbox=_parse_bool(all_settings.get("use_sandbox"), False),
+        sandbox_image_size=all_settings.get("sandbox_image_size", "10gb"),
+        sandbox_memory=all_settings.get("sandbox_memory", "4gb"),
+        sandbox_timeout=all_settings.get("sandbox_timeout", "3600"),
+        sandbox_auto_cleanup=_parse_bool(all_settings.get("sandbox_auto_cleanup"), True),
     )
 
 
@@ -163,6 +169,22 @@ async def update_settings(update: SettingsUpdate):
 
         os.environ["GEMINI_API_KEY"] = update.gemini_api_key
 
+    # Sandbox settings
+    if update.use_sandbox is not None:
+        set_setting("use_sandbox", "true" if update.use_sandbox else "false")
+    
+    if update.sandbox_image_size is not None:
+        set_setting("sandbox_image_size", update.sandbox_image_size)
+    
+    if update.sandbox_memory is not None:
+        set_setting("sandbox_memory", update.sandbox_memory)
+    
+    if update.sandbox_timeout is not None:
+        set_setting("sandbox_timeout", update.sandbox_timeout)
+    
+    if update.sandbox_auto_cleanup is not None:
+        set_setting("sandbox_auto_cleanup", "true" if update.sandbox_auto_cleanup else "false")
+
     # Return updated settings
     all_settings = get_all_settings()
 
@@ -184,4 +206,10 @@ async def update_settings(update: SettingsUpdate):
         ollama_base_url=all_settings.get("ollama_base_url", "http://localhost:11434"),
         ollama_model=all_settings.get("ollama_model"),
         gemini_api_key=masked_key,
+        # Sandbox settings
+        use_sandbox=_parse_bool(all_settings.get("use_sandbox"), False),
+        sandbox_image_size=all_settings.get("sandbox_image_size", "10gb"),
+        sandbox_memory=all_settings.get("sandbox_memory", "4gb"),
+        sandbox_timeout=all_settings.get("sandbox_timeout", "3600"),
+        sandbox_auto_cleanup=_parse_bool(all_settings.get("sandbox_auto_cleanup"), True),
     )
