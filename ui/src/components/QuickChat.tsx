@@ -13,13 +13,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -100,17 +93,6 @@ export function QuickChat({ onClose }: QuickChatProps) {
       };
     }
     return { content: text };
-  };
-
-  const getModeIcon = (mode: string) => {
-    switch (mode) {
-      case "agent":
-        return <Zap size={16} />;
-      case "spec":
-        return <Code2 size={16} />;
-      default:
-        return <Brain size={16} />;
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -321,6 +303,8 @@ export function QuickChat({ onClose }: QuickChatProps) {
             >
               <X size={16} />
             </Button>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-4 p-4">
@@ -388,6 +372,7 @@ export function QuickChat({ onClose }: QuickChatProps) {
                   </span>
                 </div>
               </div>
+            )}
           </div>
         </ScrollArea>
 
@@ -396,7 +381,7 @@ export function QuickChat({ onClose }: QuickChatProps) {
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
+            onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 handleSubmit(e as any);

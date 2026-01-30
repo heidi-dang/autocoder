@@ -145,6 +145,7 @@ export interface SetupStatus {
   credentials: boolean
   node: boolean
   npm: boolean
+  gemini?: boolean
 }
 
 // Dev Server types
@@ -529,12 +530,30 @@ export interface Settings {
   glm_mode: boolean
   ollama_mode: boolean
   testing_agent_ratio: number  // Regression testing agents (0-3)
+  ai_provider?: string
+  ollama_base_url?: string
+  ollama_model?: string
+  gemini_api_key?: string
+  use_sandbox?: boolean
+  sandbox_image_size?: string
+  sandbox_memory?: string
+  sandbox_timeout?: string
+  sandbox_auto_cleanup?: boolean
 }
 
 export interface SettingsUpdate {
   yolo_mode?: boolean
   model?: string
   testing_agent_ratio?: number
+  ai_provider?: string
+  ollama_base_url?: string
+  ollama_model?: string
+  gemini_api_key?: string
+  use_sandbox?: boolean
+  sandbox_image_size?: string
+  sandbox_memory?: string
+  sandbox_timeout?: string
+  sandbox_auto_cleanup?: boolean
 }
 
 export interface ProjectSettingsUpdate {

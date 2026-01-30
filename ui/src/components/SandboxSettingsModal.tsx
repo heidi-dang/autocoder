@@ -28,7 +28,7 @@ interface SandboxSettingsModalProps {
 }
 
 export function SandboxSettingsModal({ isOpen, onClose }: SandboxSettingsModalProps) {
-  const { data: settings, isLoading, refetch } = useSettings();
+  const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
 
   const [useSandbox, setUseSandbox] = useState(false);

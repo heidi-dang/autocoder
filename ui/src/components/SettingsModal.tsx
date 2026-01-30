@@ -6,7 +6,7 @@ import {
   useAvailableModels,
 } from "../hooks/useProjects";
 import { useTheme, THEMES } from "../hooks/useTheme";
-import { getOllamaModels, testOllamaConnection } from "../lib/api";
+// import { getOllamaModels, testOllamaConnection } from "../lib/api";
 import { OllamaSetupWizard } from "./OllamaSetupWizard";
 import {
   Dialog,
@@ -55,15 +55,16 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   // Load Ollama models when provider is local
   useEffect(() => {
     if (settings?.ai_provider === "local" && isOpen) {
-      loadOllamaModels();
+      // loadOllamaModels();
     }
   }, [settings?.ai_provider, isOpen]);
 
   const loadOllamaModels = async () => {
     setLoadingOllamaModels(true);
     try {
-      const data = await getOllamaModels();
-      setOllamaModels(data.models || []);
+      // const data = await getOllamaModels();
+      // setOllamaModels(data.models || []);
+      setOllamaModels([]);
     } catch (error) {
       console.error("Failed to load Ollama models:", error);
       setOllamaModels([]);
@@ -75,7 +76,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const handleTestOllama = async () => {
     setOllamaTestResult(null);
     try {
-      const result = await testOllamaConnection();
+      // const result = await testOllamaConnection();
+      const result = { success: false, message: "Not implemented" };
       setOllamaTestResult(result);
       if (result.success) {
         loadOllamaModels();

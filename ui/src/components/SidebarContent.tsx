@@ -29,7 +29,6 @@ export function SidebarContent({
   projects,
   selectedProject,
   onSelectProject,
-  onAddProject,
   features,
   selectedFeature,
   onSelectFeature,

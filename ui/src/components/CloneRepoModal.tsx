@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { GitBranch, Loader2 } from "lucide-react";
-import { useCloneProjectRepository } from "../hooks/useProjects";
+// import { useCloneProjectRepository } from "../hooks/useProjects";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ interface CloneRepoModalProps {
 }
 
 export function CloneRepoModal({ isOpen, onClose, projectName }: CloneRepoModalProps) {
-  const cloneRepo = useCloneProjectRepository(projectName);
+  // const cloneRepo = useCloneProjectRepository(projectName);
   const [repoUrl, setRepoUrl] = useState("");
   const [targetDir, setTargetDir] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -41,38 +41,12 @@ export function CloneRepoModal({ isOpen, onClose, projectName }: CloneRepoModalP
   }
 
   const handleClose = () => {
-    if (cloneRepo.isPending) {
-      return;
-    }
     onClose();
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
-    setSuccessMessage(null);
-
-    if (!projectName) {
-      setError("Select a project first");
-      return;
-    }
-
-    const trimmedUrl = repoUrl.trim();
-    if (!trimmedUrl) {
-      setError("Repository URL is required");
-      return;
-    }
-
-    try {
-      const result = await cloneRepo.mutateAsync({
-        repoUrl: trimmedUrl,
-        targetDir: targetDir.trim() || undefined,
-      });
-      setSuccessMessage(result.message);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to clone repository";
-      setError(message);
-    }
+    setError("Clone functionality not yet implemented");
   };
 
   return (
@@ -104,7 +78,7 @@ export function CloneRepoModal({ isOpen, onClose, projectName }: CloneRepoModalP
               placeholder="https://github.com/owner/repo.git"
               value={repoUrl}
               onChange={(event) => setRepoUrl(event.target.value)}
-              disabled={cloneRepo.isPending}
+              disabled={false}
               autoFocus
             />
           </div>
@@ -116,7 +90,7 @@ export function CloneRepoModal({ isOpen, onClose, projectName }: CloneRepoModalP
               placeholder="repo-name"
               value={targetDir}
               onChange={(event) => setTargetDir(event.target.value)}
-              disabled={cloneRepo.isPending}
+              disabled={false}
             />
             <p className="text-xs text-muted-foreground">
               Leave blank to derive the folder name from the repository URL.
@@ -136,11 +110,11 @@ export function CloneRepoModal({ isOpen, onClose, projectName }: CloneRepoModalP
           )}
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={cloneRepo.isPending}>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={false}>
               Close
             </Button>
-            <Button type="submit" disabled={cloneRepo.isPending || !projectName}>
-              {cloneRepo.isPending ? (
+            <Button type="submit" disabled={false || !projectName}>
+              {false ? (
                 <span className="flex items-center gap-2">
                   <Loader2 size={16} className="animate-spin" />
                   Cloning...
