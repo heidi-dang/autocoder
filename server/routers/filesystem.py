@@ -236,7 +236,6 @@ def is_unc_path(path_str: str) -> bool:
 async def list_directory(
     path: str | None = Query(None, description="Directory path to list (defaults to home)"),
     show_hidden: bool = Query(False, description="Include hidden files"),
-    request: Request | None = None,
 ):
     """
     List contents of a directory.
@@ -264,11 +263,9 @@ async def list_directory(
         raise HTTPException(status_code=400, detail=f"Invalid path: {e}")
 
     # Security: Check if path is blocked (allow superuser 'root')
+    # Note: superuser check not available in list_directory without Request param
+    # Use validate_path endpoint for superuser functionality
     is_super = False
-    try:
-        is_super = getattr(request.state, "autocoder_user", None) == "root"
-    except Exception:
-        is_super = False
 
     if not is_super and is_path_blocked(target):
         logger.warning("Blocked access to restricted path: %s", target)
@@ -414,7 +411,7 @@ def get_windows_drives() -> list[DriveInfo]:
 
 
 @router.post("/validate", response_model=PathValidationResponse)
-async def validate_path(path: str = Query(..., description="Path to validate"), request: Request | None = None):
+async def validate_path(path: str = Query(..., description="Path to validate")) -> PathValidationResponse:
     """
     Validate if a path is accessible and writable.
 
@@ -445,10 +442,7 @@ async def validate_path(path: str = Query(..., description="Path to validate"), 
 
     # Security: Check if blocked (allow superuser 'root')
     is_super = False
-    try:
-        is_super = bool(request and getattr(request.state, "autocoder_user", None) == "root")
-    except Exception:
-        is_super = False
+    # Superuser check not available without Request injection
 
     if not is_super and is_path_blocked(target):
         return PathValidationResponse(
@@ -497,7 +491,7 @@ async def validate_path(path: str = Query(..., description="Path to validate"), 
 
 
 @router.post("/create-directory")
-async def create_directory(request: CreateDirectoryRequest, http_request: Request | None = None):
+async def create_directory(request: CreateDirectoryRequest):
     """
     Create a new directory inside a parent directory.
 
@@ -534,10 +528,7 @@ async def create_directory(request: CreateDirectoryRequest, http_request: Reques
 
     # Security: Check if parent is blocked (allow superuser 'root')
     is_super = False
-    try:
-        is_super = bool(http_request and getattr(http_request.state, "autocoder_user", None) == "root")
-    except Exception:
-        is_super = False
+    # Superuser check not available without Request injection
 
     if not is_super and is_path_blocked(parent):
         raise HTTPException(

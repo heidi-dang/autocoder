@@ -353,6 +353,9 @@ async def assistant_chat_websocket(websocket: WebSocket, project_name: str):
 class QuickChatRequest(BaseModel):
     """Request for quick chat."""
     message: str
+    mode: Optional[str] = "assistant"  # assistant, agent, or spec
+    model: Optional[str] = None  # Override default model if provided
+    command: Optional[str] = None  # /task, /debug, /analyze, etc.
 
 
 @router.post("/quick-chat")
@@ -360,6 +363,11 @@ async def quick_chat(request: QuickChatRequest):
     """
     Stream a quick chat response without project context.
     Uses configured AI provider (cloud or local Ollama).
+    
+    Supports:
+    - mode: "assistant" (default), "agent" (autonomous), or "spec" (specification generation)
+    - model: override the default model selection
+    - command: /task, /debug, /analyze, etc. for command-based task creation
     """
     import sys
     root = Path(__file__).parent.parent.parent
@@ -371,22 +379,42 @@ async def quick_chat(request: QuickChatRequest):
     settings = get_all_settings()
     ai_provider = settings.get("ai_provider", "cloud")
     
+    # Build the message with mode/command context
+    enhanced_message = request.message
+    if request.command:
+        # Add command context to the message
+        mode_context = {
+            "task": "Create a new task for: ",
+            "debug": "Debug the following code: ",
+            "analyze": "Analyze the following code: ",
+            "refactor": "Refactor the following code: ",
+            "test": "Create tests for: ",
+        }
+        prefix = mode_context.get(request.command, f"Execute {request.command} command on: ")
+        enhanced_message = f"{prefix}{request.message}"
+    
+    # Add mode-specific instructions
+    if request.mode == "agent":
+        enhanced_message += "\n[Mode: AGENT] Please execute this autonomously and provide step-by-step execution plan."
+    elif request.mode == "spec":
+        enhanced_message += "\n[Mode: SPEC] Please generate a detailed specification document for this."
+    
     async def generate():
         try:
             if ai_provider == "local":
                 # Use Ollama
-                ollama_model = settings.get("ollama_model", "llama3.2")
+                model_to_use = request.model or settings.get("ollama_model", "llama3.2")
                 async for chunk in ollama_client.stream_chat(
-                    request.message,
-                    model=ollama_model,
+                    enhanced_message,
+                    model=model_to_use,
                 ):
                     yield chunk
             else:
                 # Use Gemini or Claude (cloud)
-                model = settings.get("model", "gemini-1.5-flash")
+                model_to_use = request.model or settings.get("model", "gemini-1.5-flash")
                 
                 # Check if Gemini API key is configured for Gemini models
-                if "gemini" in model:
+                if "gemini" in model_to_use:
                     gemini_key = settings.get("gemini_api_key")
                     if gemini_key:
                         # Set environment variable for this request
@@ -394,13 +422,13 @@ async def quick_chat(request: QuickChatRequest):
                         os.environ["GEMINI_API_KEY"] = gemini_key
                     
                     async for chunk in gemini_client.stream_chat(
-                        request.message,
-                        model=model
+                        enhanced_message,
+                        model=model_to_use
                     ):
                         yield chunk
                 else:
                     # For Claude models, use existing implementation
-                    async for chunk in gemini_client.stream_chat(request.message):
+                    async for chunk in gemini_client.stream_chat(enhanced_message):
                         yield chunk
         except Exception as e:
             logger.exception("Quick chat error")
