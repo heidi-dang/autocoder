@@ -28,6 +28,7 @@ import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp'
 import { ThemeSelector } from './components/ThemeSelector'
 import { ResetProjectModal } from './components/ResetProjectModal'
 import { ProjectSetupRequired } from './components/ProjectSetupRequired'
+import { QuickChat } from './components/QuickChat'
 import { getDependencyGraph } from './lib/api'
 import { Loader2, Settings, Moon, Sun, RotateCcw } from 'lucide-react'
 import type { Feature } from './lib/types'
@@ -360,13 +361,8 @@ function App() {
         style={{ paddingBottom: debugOpen ? debugPanelHeight + 32 : COLLAPSED_DEBUG_PANEL_CLEARANCE }}
       >
         {!selectedProject ? (
-          <div className="text-center mt-12">
-            <h2 className="font-display text-2xl font-bold mb-2">
-              Welcome to AutoCoder
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              Select a project from the dropdown above or create a new one to get started.
-            </p>
+          <div className="mt-8">
+            <QuickChat />
           </div>
         ) : !hasSpec ? (
           <ProjectSetupRequired

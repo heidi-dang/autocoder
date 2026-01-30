@@ -7,6 +7,7 @@ import {
   Zap,
   Code2,
   Brain,
+  ChevronDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -213,112 +222,108 @@ export function QuickChat({ onClose }: QuickChatProps) {
             <MessageSquare size={20} />
           </div>
           <div>
-            <CardTitle className="text-lg">Get Started</CardTitle>
+            <CardTitle className="text-lg">Quick Chat</CardTitle>
             <p className="text-xs text-slate-300 mt-1">
-              Create your first project to unlock full AI capabilities
+              Chat with AI instantly - no project selection needed
             </p>
           </div>
         </div>
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-8 w-8 p-0 text-white hover:bg-white/20"
-          >
-            <X size={16} />
-          </Button>
-        )}
+        
+        {/* Mode and Model Selectors in Header */}
+        <div className="flex items-center gap-2">
+          {/* AI Mode Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0 text-white hover:bg-white/20"
+                title="AI Mode"
+              >
+                {aiMode === "agent" ? (
+                  <Zap size={18} />
+                ) : aiMode === "spec" ? (
+                  <Code2 size={18} />
+                ) : (
+                  <Brain size={18} />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>AI Mode</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setAiMode("assistant")}
+                className={aiMode === "assistant" ? "bg-blue-100 dark:bg-blue-900" : ""}
+              >
+                <Brain size={14} className="mr-2" />
+                Assistant
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setAiMode("agent")}
+                className={aiMode === "agent" ? "bg-blue-100 dark:bg-blue-900" : ""}
+              >
+                <Zap size={14} className="mr-2" />
+                Agent
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setAiMode("spec")}
+                className={aiMode === "spec" ? "bg-blue-100 dark:bg-blue-900" : ""}
+              >
+                <Code2 size={14} className="mr-2" />
+                Spec Creator
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Model Dropdown */}
+          {availableModels.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-2 text-white hover:bg-white/20 text-xs"
+                  title="Select Model"
+                >
+                  {selectedModel === "auto" ? "Auto" : selectedModel.split(":")[0]}
+                  <ChevronDown size={14} className="ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Model</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setSelectedModel("auto")}
+                  className={selectedModel === "auto" ? "bg-blue-100 dark:bg-blue-900" : ""}
+                >
+                  Auto (Best)
+                </DropdownMenuItem>
+                {availableModels.map((model) => (
+                  <DropdownMenuItem
+                    key={model}
+                    onClick={() => setSelectedModel(model)}
+                    className={selectedModel === model ? "bg-blue-100 dark:bg-blue-900" : ""}
+                  >
+                    {model.replace(":", " • ")}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="h-8 w-8 p-0 text-white hover:bg-white/20"
+            >
+              <X size={16} />
+            </Button>
       </CardHeader>
 
       <CardContent className="space-y-4 p-4">
-        {/* Control Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-          {/* AI Mode Selection */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
-              AI Mode
-            </label>
-            <Select value={aiMode} onValueChange={(value: any) => setAiMode(value)}>
-              <SelectTrigger className="h-9 text-sm">
-                <div className="flex items-center gap-2">
-                  {getModeIcon(aiMode)}
-                  <SelectValue />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="assistant">
-                  <div className="flex items-center gap-2">
-                    <Brain size={14} />
-                    Assistant
-                  </div>
-                </SelectItem>
-                <SelectItem value="agent">
-                  <div className="flex items-center gap-2">
-                    <Zap size={14} />
-                    Agent
-                  </div>
-                </SelectItem>
-                <SelectItem value="spec">
-                  <div className="flex items-center gap-2">
-                    <Code2 size={14} />
-                    Spec Creator
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {aiMode === "agent"
-                ? "Autonomous execution mode"
-                : aiMode === "spec"
-                ? "Generate specifications"
-                : "Chat assistance"}
-            </p>
-          </div>
-
-          {/* Model Selection */}
-          {availableModels.length > 0 && (
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
-                Model
-              </label>
-              <Select
-                value={selectedModel}
-                onValueChange={setSelectedModel}
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Auto (Best)</SelectItem>
-                  {availableModels.map((model) => (
-                    <SelectItem key={model} value={model}>
-                      {model.replace(":", " • ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {selectedModel === "auto"
-                  ? "Auto-select best model"
-                  : selectedModel}
-              </p>
-            </div>
-          )}
-
-          {/* Info/Settings */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
-              Quick Tips
-            </label>
-            <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
-              <p>• Use <code className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">/task</code> to create tasks</p>
-              <p>• Use <code className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">/debug</code> for debugging</p>
-              <p>• Or just chat freely</p>
-            </div>
-          </div>
-        </div>
-
         {/* Chat Messages */}
         <ScrollArea
           ref={scrollRef}
@@ -330,19 +335,10 @@ export function QuickChat({ onClose }: QuickChatProps) {
                 <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
                   <MessageSquare size={32} className="opacity-50" />
                 </div>
-                <p className="text-sm font-medium">Welcome to Quick Chat</p>
+                <p className="text-sm font-medium">Start Chatting</p>
                 <p className="text-xs mt-2 max-w-xs">
-                  Create a project to get started with full AI capabilities including
-                  assistant chat, agent orchestration, and more.
+                  Ask me anything. Use /task for tasks, /debug for debugging, or just chat naturally.
                 </p>
-                <div className="mt-4 space-y-2 text-left text-xs">
-                  <p className="font-semibold text-slate-600 dark:text-slate-300">Next steps:</p>
-                  <div className="space-y-1">
-                    <p>1. Select a project from the sidebar</p>
-                    <p>2. Use the assistant panel (press <kbd>A</kbd>)</p>
-                    <p>3. Chat with AI, manage features, run agents</p>
-                  </div>
-                </div>
               </div>
             ) : (
               messages.map((message, index) => (
@@ -392,26 +388,33 @@ export function QuickChat({ onClose }: QuickChatProps) {
                   </span>
                 </div>
               </div>
-            )}
           </div>
         </ScrollArea>
 
-        {/* Getting Started Info */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4 space-y-3">
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-2">
-                Ready to get started?
-              </h4>
-              <ol className="text-xs space-y-2 text-slate-700 dark:text-slate-300 list-decimal list-inside">
-                <li>Use the sidebar menu to select or create a project</li>
-                <li>Once selected, you'll see your project's features</li>
-                <li>Press <kbd className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded text-xs font-mono">A</kbd> to open the AI assistant</li>
-                <li>Chat with AI, manage features, and run agents</li>
-              </ol>
-            </div>
-          </div>
-        </div>
+        {/* Input Area */}
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e as any);
+              }
+            }}
+            placeholder="Ask me anything... Use /task, /debug, or just chat freely"
+            className="min-h-[80px] resize-none"
+            disabled={isLoading}
+          />
+          <Button
+            type="submit"
+            size="icon"
+            disabled={isLoading || !input.trim()}
+            className="h-auto px-6 bg-blue-500 hover:bg-blue-600"
+          >
+            <Send size={18} />
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );
