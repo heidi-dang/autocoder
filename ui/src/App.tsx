@@ -21,6 +21,7 @@ import { AssistantPanel } from './components/AssistantPanel'
 import { ExpandProjectModal } from './components/ExpandProjectModal'
 import { SpecCreationChat } from './components/SpecCreationChat'
 import { SettingsModal } from './components/SettingsModal'
+import { SandboxSettingsModal } from './components/SandboxSettingsModal'
 import { DevServerControl } from './components/DevServerControl'
 import { ViewToggle, type ViewMode } from './components/ViewToggle'
 import { DependencyGraph } from './components/DependencyGraph'
@@ -30,7 +31,7 @@ import { ResetProjectModal } from './components/ResetProjectModal'
 import { ProjectSetupRequired } from './components/ProjectSetupRequired'
 import { QuickChat } from './components/QuickChat'
 import { getDependencyGraph } from './lib/api'
-import { Loader2, Settings, Moon, Sun, RotateCcw } from 'lucide-react'
+import { Loader2, Settings, Moon, Sun, RotateCcw, Box } from 'lucide-react'
 import type { Feature } from './lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -60,6 +61,7 @@ function App() {
   const [debugActiveTab, setDebugActiveTab] = useState<TabType>('agent')
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showSandboxSettings, setShowSandboxSettings] = useState(false)
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [isSpecCreating, setIsSpecCreating] = useState(false)
   const [showResetModal, setShowResetModal] = useState(false)
@@ -237,7 +239,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedProject, showAddFeature, showExpandProject, selectedFeature, debugOpen, debugActiveTab, assistantOpen, features, showSettings, showKeyboardHelp, isSpecCreating, viewMode, showResetModal, wsState.agentStatus])
+  }, [selectedProject, showAddFeature, showExpandProject, selectedFeature, debugOpen, debugActiveTab, assistantOpen, features, showSettings, showSandboxSettings, showKeyboardHelp, isSpecCreating, viewMode, showResetModal, wsState.agentStatus])
 
   // Combine WebSocket progress with feature data
   const progress = wsState.progress.total > 0 ? wsState.progress : {
@@ -297,6 +299,16 @@ function App() {
                     aria-label="Open Settings"
                   >
                     <Settings size={18} />
+                  </Button>
+
+                  <Button
+                    onClick={() => setShowSandboxSettings(true)}
+                    variant="outline"
+                    size="sm"
+                    title="Sandbox Settings"
+                    aria-label="Open Sandbox Settings"
+                  >
+                    <Box size={18} />
                   </Button>
 
                   <Button
@@ -536,6 +548,9 @@ function App() {
 
       {/* Settings Modal */}
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+
+      {/* Sandbox Settings Modal */}
+      <SandboxSettingsModal isOpen={showSandboxSettings} onClose={() => setShowSandboxSettings(false)} />
 
       {/* Keyboard Shortcuts Help */}
       <KeyboardShortcutsHelp isOpen={showKeyboardHelp} onClose={() => setShowKeyboardHelp(false)} />
