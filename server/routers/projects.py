@@ -8,20 +8,17 @@ Uses project registry for path lookups instead of fixed generations/ directory.
 
 import re
 import shutil
-import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 from fastapi import APIRouter, HTTPException
 
 from ..schemas import (
-    ProjectCloneRequest,
-    ProjectCloneResponse,
     ProjectCreate,
     ProjectDetail,
     ProjectPrompts,
     ProjectPromptsUpdate,
+    ProjectSettingsUpdate,
     ProjectStats,
     ProjectSummary,
 )
@@ -44,7 +41,6 @@ def _init_imports():
         return
 
     import sys
-
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
@@ -63,20 +59,28 @@ def _init_imports():
 def _get_registry_functions():
     """Get registry functions with lazy import."""
     import sys
-
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
     from registry import (
+        get_project_concurrency,
         get_project_path,
         list_registered_projects,
         register_project,
+        set_project_concurrency,
         unregister_project,
         validate_project_path,
     )
-
-    return register_project, unregister_project, get_project_path, list_registered_projects, validate_project_path
+    return (
+        register_project,
+        unregister_project,
+        get_project_path,
+        list_registered_projects,
+        validate_project_path,
+        get_project_concurrency,
+        set_project_concurrency,
+    )
 
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -84,36 +88,12 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 def validate_project_name(name: str) -> str:
     """Validate and sanitize project name to prevent path traversal."""
-    if not re.match(r"^[a-zA-Z0-9_-]{1,50}$", name):
+    if not re.match(r'^[a-zA-Z0-9_-]{1,50}$', name):
         raise HTTPException(
             status_code=400,
-            detail="Invalid project name. Use only letters, numbers, hyphens, and underscores (1-50 chars).",
+            detail="Invalid project name. Use only letters, numbers, hyphens, and underscores (1-50 chars)."
         )
     return name
-
-
-def _derive_repo_dirname(repo_url: str) -> str:
-    """Derive a reasonable default directory name from a repo URL."""
-    parsed = urlparse(repo_url)
-    candidate = parsed.path.rstrip("/").split("/")[-1] or "repo"
-    if candidate.endswith(".git"):
-        candidate = candidate[:-4]
-    return candidate or "repo"
-
-
-def _validate_target_dirname(dirname: str) -> str:
-    """Validate a clone target directory name (must be a simple relative name)."""
-    trimmed = dirname.strip()
-    if not trimmed:
-        raise HTTPException(status_code=400, detail="Target directory name cannot be empty")
-    if "/" in trimmed or "\\" in trimmed or ".." in trimmed:
-        raise HTTPException(status_code=400, detail="Target directory must be a simple name")
-    if not re.match(r"^[a-zA-Z0-9._-]{1,100}$", trimmed):
-        raise HTTPException(
-            status_code=400,
-            detail="Target directory contains invalid characters",
-        )
-    return trimmed
 
 
 def get_project_stats(project_dir: Path) -> ProjectStats:
@@ -121,14 +101,20 @@ def get_project_stats(project_dir: Path) -> ProjectStats:
     _init_imports()
     passing, in_progress, total = _count_passing_tests(project_dir)
     percentage = (passing / total * 100) if total > 0 else 0.0
-    return ProjectStats(passing=passing, in_progress=in_progress, total=total, percentage=round(percentage, 1))
+    return ProjectStats(
+        passing=passing,
+        in_progress=in_progress,
+        total=total,
+        percentage=round(percentage, 1)
+    )
 
 
 @router.get("", response_model=list[ProjectSummary])
 async def list_projects():
     """List all registered projects."""
     _init_imports()
-    _, _, _, list_registered_projects, validate_project_path = _get_registry_functions()
+    (_, _, _, list_registered_projects, validate_project_path,
+     get_project_concurrency, _) = _get_registry_functions()
 
     projects = list_registered_projects()
     result = []
@@ -144,14 +130,13 @@ async def list_projects():
         has_spec = _check_spec_exists(project_dir)
         stats = get_project_stats(project_dir)
 
-        result.append(
-            ProjectSummary(
-                name=name,
-                path=info["path"],
-                has_spec=has_spec,
-                stats=stats,
-            )
-        )
+        result.append(ProjectSummary(
+            name=name,
+            path=info["path"],
+            has_spec=has_spec,
+            stats=stats,
+            default_concurrency=info.get("default_concurrency", 3),
+        ))
 
     return result
 
@@ -160,7 +145,8 @@ async def list_projects():
 async def create_project(project: ProjectCreate):
     """Create a new project at the specified path."""
     _init_imports()
-    register_project, _, get_project_path, list_registered_projects, _ = _get_registry_functions()
+    (register_project, _, get_project_path, list_registered_projects,
+     _, _, _) = _get_registry_functions()
 
     name = validate_project_name(project.name)
     project_path = Path(project.path).resolve()
@@ -168,7 +154,10 @@ async def create_project(project: ProjectCreate):
     # Check if project name already registered
     existing = get_project_path(name)
     if existing:
-        raise HTTPException(status_code=409, detail=f"Project '{name}' already exists at {existing}")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Project '{name}' already exists at {existing}"
+        )
 
     # Check if path already registered under a different name
     all_projects = list_registered_projects()
@@ -182,25 +171,34 @@ async def create_project(project: ProjectCreate):
 
         if paths_match:
             raise HTTPException(
-                status_code=409, detail=f"Path '{project_path}' is already registered as project '{existing_name}'"
+                status_code=409,
+                detail=f"Path '{project_path}' is already registered as project '{existing_name}'"
             )
 
     # Security: Check if path is in a blocked location
     from .filesystem import is_path_blocked
-
     if is_path_blocked(project_path):
-        raise HTTPException(status_code=403, detail="Cannot create project in system or sensitive directory")
+        raise HTTPException(
+            status_code=403,
+            detail="Cannot create project in system or sensitive directory"
+        )
 
     # Validate the path is usable
     if project_path.exists():
         if not project_path.is_dir():
-            raise HTTPException(status_code=400, detail="Path exists but is not a directory")
+            raise HTTPException(
+                status_code=400,
+                detail="Path exists but is not a directory"
+            )
     else:
         # Create the directory
         try:
             project_path.mkdir(parents=True, exist_ok=True)
         except OSError as e:
-            raise HTTPException(status_code=500, detail=f"Failed to create directory: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to create directory: {e}"
+            )
 
     # Scaffold prompts
     _scaffold_project_prompts(project_path)
@@ -209,13 +207,17 @@ async def create_project(project: ProjectCreate):
     try:
         register_project(name, project_path)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to register project: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to register project: {e}"
+        )
 
     return ProjectSummary(
         name=name,
         path=project_path.as_posix(),
         has_spec=False,  # Just created, no spec yet
         stats=ProjectStats(passing=0, total=0, percentage=0.0),
+        default_concurrency=3,
     )
 
 
@@ -223,7 +225,7 @@ async def create_project(project: ProjectCreate):
 async def get_project(name: str):
     """Get detailed information about a project."""
     _init_imports()
-    _, _, get_project_path, _, _ = _get_registry_functions()
+    (_, _, get_project_path, _, _, get_project_concurrency, _) = _get_registry_functions()
 
     name = validate_project_name(name)
     project_dir = get_project_path(name)
@@ -244,6 +246,7 @@ async def get_project(name: str):
         has_spec=has_spec,
         stats=stats,
         prompts_dir=str(prompts_dir),
+        default_concurrency=get_project_concurrency(name),
     )
 
 
@@ -257,7 +260,7 @@ async def delete_project(name: str, delete_files: bool = False):
         delete_files: If True, also delete the project directory and files
     """
     _init_imports()
-    _, unregister_project, get_project_path, _, _ = _get_registry_functions()
+    (_, unregister_project, get_project_path, _, _, _, _) = _get_registry_functions()
 
     name = validate_project_name(name)
     project_dir = get_project_path(name)
@@ -269,7 +272,8 @@ async def delete_project(name: str, delete_files: bool = False):
     lock_file = project_dir / ".agent.lock"
     if lock_file.exists():
         raise HTTPException(
-            status_code=409, detail="Cannot delete project while agent is running. Stop the agent first."
+            status_code=409,
+            detail="Cannot delete project while agent is running. Stop the agent first."
         )
 
     # Optionally delete files
@@ -284,7 +288,7 @@ async def delete_project(name: str, delete_files: bool = False):
 
     return {
         "success": True,
-        "message": f"Project '{name}' deleted" + (" (files removed)" if delete_files else " (files preserved)"),
+        "message": f"Project '{name}' deleted" + (" (files removed)" if delete_files else " (files preserved)")
     }
 
 
@@ -292,7 +296,7 @@ async def delete_project(name: str, delete_files: bool = False):
 async def get_project_prompts(name: str):
     """Get the content of project prompt files."""
     _init_imports()
-    _, _, get_project_path, _, _ = _get_registry_functions()
+    (_, _, get_project_path, _, _, _, _) = _get_registry_functions()
 
     name = validate_project_name(name)
     project_dir = get_project_path(name)
@@ -325,7 +329,7 @@ async def get_project_prompts(name: str):
 async def update_project_prompts(name: str, prompts: ProjectPromptsUpdate):
     """Update project prompt files."""
     _init_imports()
-    _, _, get_project_path, _, _ = _get_registry_functions()
+    (_, _, get_project_path, _, _, _, _) = _get_registry_functions()
 
     name = validate_project_name(name)
     project_dir = get_project_path(name)
@@ -355,7 +359,7 @@ async def update_project_prompts(name: str, prompts: ProjectPromptsUpdate):
 async def get_project_stats_endpoint(name: str):
     """Get current progress statistics for a project."""
     _init_imports()
-    _, _, get_project_path, _, _ = _get_registry_functions()
+    (_, _, get_project_path, _, _, _, _) = _get_registry_functions()
 
     name = validate_project_name(name)
     project_dir = get_project_path(name)
@@ -369,64 +373,119 @@ async def get_project_stats_endpoint(name: str):
     return get_project_stats(project_dir)
 
 
-@router.post("/{name}/clone", response_model=ProjectCloneResponse)
-async def clone_repository(name: str, request: ProjectCloneRequest):
-    """Clone a git repository into a registered project directory."""
-    _init_imports()
-    _, _, get_project_path, _, _ = _get_registry_functions()
+@router.post("/{name}/reset")
+async def reset_project(name: str, full_reset: bool = False):
+    """
+    Reset a project to its initial state.
 
-    project_name = validate_project_name(name)
-    project_dir = get_project_path(project_name)
+    Args:
+        name: Project name to reset
+        full_reset: If True, also delete prompts/ directory (triggers setup wizard)
+
+    Returns:
+        Dictionary with list of deleted files and reset type
+    """
+    _init_imports()
+    (_, _, get_project_path, _, _, _, _) = _get_registry_functions()
+
+    name = validate_project_name(name)
+    project_dir = get_project_path(name)
 
     if not project_dir:
-        raise HTTPException(status_code=404, detail=f"Project '{project_name}' not found")
+        raise HTTPException(status_code=404, detail=f"Project '{name}' not found")
 
     if not project_dir.exists():
         raise HTTPException(status_code=404, detail="Project directory not found")
 
-    git_path = shutil.which("git")
-    if not git_path:
-        raise HTTPException(status_code=500, detail="git is not installed on the server")
-
-    repo_url = request.repo_url.strip()
-    if not repo_url:
-        raise HTTPException(status_code=400, detail="Repository URL is required")
-
-    target_dirname = (
-        _validate_target_dirname(request.target_dir) if request.target_dir else _derive_repo_dirname(repo_url)
-    )
-    clone_target = (project_dir / target_dirname).resolve()
-
-    # Safety: ensure the resolved target stays within the project directory
-    project_root = project_dir.resolve()
-    if project_root not in clone_target.parents and clone_target != project_root:
-        raise HTTPException(status_code=400, detail="Clone target must be inside the project directory")
-
-    if clone_target.exists():
-        raise HTTPException(status_code=409, detail=f"Target directory already exists: {clone_target}")
-
-    try:
-        result = subprocess.run(
-            [git_path, "clone", repo_url, str(clone_target)],
-            cwd=str(project_dir),
-            capture_output=True,
-            text=True,
-            timeout=300,
-            check=False,
+    # Check if agent is running
+    lock_file = project_dir / ".agent.lock"
+    if lock_file.exists():
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot reset project while agent is running. Stop the agent first."
         )
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail="git clone timed out after 5 minutes")
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to run git clone: {exc}")
 
-    if result.returncode != 0:
-        stderr = (result.stderr or "").strip()
-        stdout = (result.stdout or "").strip()
-        detail = stderr or stdout or "git clone failed"
-        raise HTTPException(status_code=400, detail=detail[:500])
+    # Dispose of database engines to release file locks (required on Windows)
+    # Import here to avoid circular imports
+    from api.database import dispose_engine as dispose_features_engine
+    from server.services.assistant_database import dispose_engine as dispose_assistant_engine
 
-    return ProjectCloneResponse(
-        success=True,
-        message=f"Cloned repository into {clone_target}",
-        path=clone_target.as_posix(),
+    dispose_features_engine(project_dir)
+    dispose_assistant_engine(project_dir)
+
+    deleted_files: list[str] = []
+
+    # Files to delete in quick reset
+    quick_reset_files = [
+        "features.db",
+        "features.db-wal",  # WAL mode journal file
+        "features.db-shm",  # WAL mode shared memory file
+        "assistant.db",
+        "assistant.db-wal",
+        "assistant.db-shm",
+        ".claude_settings.json",
+        ".claude_assistant_settings.json",
+    ]
+
+    for filename in quick_reset_files:
+        file_path = project_dir / filename
+        if file_path.exists():
+            try:
+                file_path.unlink()
+                deleted_files.append(filename)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to delete {filename}: {e}")
+
+    # Full reset: also delete prompts directory
+    if full_reset:
+        prompts_dir = project_dir / "prompts"
+        if prompts_dir.exists():
+            try:
+                shutil.rmtree(prompts_dir)
+                deleted_files.append("prompts/")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to delete prompts/: {e}")
+
+    return {
+        "success": True,
+        "reset_type": "full" if full_reset else "quick",
+        "deleted_files": deleted_files,
+        "message": f"Project '{name}' has been reset" + (" (full reset)" if full_reset else " (quick reset)")
+    }
+
+
+@router.patch("/{name}/settings", response_model=ProjectDetail)
+async def update_project_settings(name: str, settings: ProjectSettingsUpdate):
+    """Update project-level settings (concurrency, etc.)."""
+    _init_imports()
+    (_, _, get_project_path, _, _, get_project_concurrency,
+     set_project_concurrency) = _get_registry_functions()
+
+    name = validate_project_name(name)
+    project_dir = get_project_path(name)
+
+    if not project_dir:
+        raise HTTPException(status_code=404, detail=f"Project '{name}' not found")
+
+    if not project_dir.exists():
+        raise HTTPException(status_code=404, detail="Project directory not found")
+
+    # Update concurrency if provided
+    if settings.default_concurrency is not None:
+        success = set_project_concurrency(name, settings.default_concurrency)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update concurrency")
+
+    # Return updated project details
+    has_spec = _check_spec_exists(project_dir)
+    stats = get_project_stats(project_dir)
+    prompts_dir = _get_project_prompts_dir(project_dir)
+
+    return ProjectDetail(
+        name=name,
+        path=project_dir.as_posix(),
+        has_spec=has_spec,
+        stats=stats,
+        prompts_dir=str(prompts_dir),
+        default_concurrency=get_project_concurrency(name),
     )

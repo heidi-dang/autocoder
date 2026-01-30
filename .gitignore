@@ -162,3 +162,8 @@ tmpclaude-*-cwd
 ui/test-results/
 
 .config/
+
+# ===================
+# Cloudflare Configuration
+# ===================
+.cloudflare/

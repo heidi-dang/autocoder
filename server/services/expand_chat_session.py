@@ -10,13 +10,13 @@ import asyncio
 import json
 import logging
 import os
-import re
 import shutil
+import sys
 import threading
 import uuid
-from collections.abc import AsyncGenerator
 from datetime import datetime
 from pathlib import Path
+from typing import AsyncGenerator, Optional
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from dotenv import load_dotenv
@@ -36,6 +36,13 @@ API_ENV_VARS = [
     "ANTHROPIC_DEFAULT_SONNET_MODEL",
     "ANTHROPIC_DEFAULT_OPUS_MODEL",
     "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+]
+
+# Feature MCP tools needed for expand session
+EXPAND_FEATURE_TOOLS = [
+    "mcp__features__feature_create",
+    "mcp__features__feature_create_bulk",
+    "mcp__features__feature_get_stats",
 ]
 
 
@@ -61,9 +68,8 @@ class ExpandChatSession:
 
     Unlike SpecChatSession which writes spec files, this session:
     1. Reads existing app_spec.txt for context
-    2. Parses feature definitions from Claude's output
-    3. Creates features via REST API
-    4. Tracks which features were created during the session
+    2. Chats with the user to define new features
+    3. Claude creates features via the feature_create_bulk MCP tool
     """
 
     def __init__(self, project_name: str, project_dir: Path):
@@ -76,15 +82,15 @@ class ExpandChatSession:
         """
         self.project_name = project_name
         self.project_dir = project_dir
-        self.client: ClaudeSDKClient | None = None
+        self.client: Optional[ClaudeSDKClient] = None
         self.messages: list[dict] = []
         self.complete: bool = False
         self.created_at = datetime.now()
-        self._conversation_id: str | None = None
+        self._conversation_id: Optional[str] = None
         self._client_entered: bool = False
         self.features_created: int = 0
         self.created_feature_ids: list[int] = []
-        self._settings_file: Path | None = None
+        self._settings_file: Optional[Path] = None
         self._query_lock = asyncio.Lock()
 
     async def close(self) -> None:
@@ -115,7 +121,10 @@ class ExpandChatSession:
         skill_path = ROOT_DIR / ".claude" / "commands" / "expand-project.md"
 
         if not skill_path.exists():
-            yield {"type": "error", "content": f"Expand project skill not found at {skill_path}"}
+            yield {
+                "type": "error",
+                "content": f"Expand project skill not found at {skill_path}"
+            }
             return
 
         # Verify project has existing spec
@@ -123,7 +132,7 @@ class ExpandChatSession:
         if not spec_path.exists():
             yield {
                 "type": "error",
-                "content": "Project has no app_spec.txt. Please create it first using spec creation.",
+                "content": "Project has no app_spec.txt. Please create it first using spec creation."
             }
             return
 
@@ -137,15 +146,19 @@ class ExpandChatSession:
         if not system_cli:
             yield {
                 "type": "error",
-                "content": "Claude CLI not found. Please install it: npm install -g @anthropic-ai/claude-code",
+                "content": "Claude CLI not found. Please install it: npm install -g @anthropic-ai/claude-code"
             }
             return
 
         # Create temporary security settings file (unique per session to avoid conflicts)
+        # Note: permission_mode="bypassPermissions" is safe here because:
+        # 1. Only Read/Glob file tools are allowed (no Write/Edit)
+        # 2. MCP tools are restricted to feature creation only
+        # 3. No Bash access - cannot execute arbitrary commands
         security_settings = {
             "sandbox": {"enabled": True},
             "permissions": {
-                "defaultMode": "acceptEdits",
+                "defaultMode": "bypassPermissions",
                 "allow": [
                     "Read(./**)",
                     "Glob(./**)",
@@ -168,6 +181,18 @@ class ExpandChatSession:
         # This allows using alternative APIs (e.g., GLM via z.ai) that may not support Claude model names
         model = os.getenv("ANTHROPIC_DEFAULT_OPUS_MODEL", "claude-opus-4-5-20251101")
 
+        # Build MCP servers config for feature creation
+        mcp_servers = {
+            "features": {
+                "command": sys.executable,
+                "args": ["-m", "mcp_server.feature_mcp"],
+                "env": {
+                    "PROJECT_DIR": str(self.project_dir.resolve()),
+                    "PYTHONPATH": str(ROOT_DIR.resolve()),
+                },
+            },
+        }
+
         # Create Claude SDK client
         try:
             self.client = ClaudeSDKClient(
@@ -178,8 +203,10 @@ class ExpandChatSession:
                     allowed_tools=[
                         "Read",
                         "Glob",
+                        *EXPAND_FEATURE_TOOLS,
                     ],
-                    permission_mode="acceptEdits",
+                    mcp_servers=mcp_servers,
+                    permission_mode="bypassPermissions",
                     max_turns=100,
                     cwd=str(self.project_dir.resolve()),
                     settings=str(settings_file.resolve()),
@@ -190,7 +217,10 @@ class ExpandChatSession:
             self._client_entered = True
         except Exception:
             logger.exception("Failed to create Claude client")
-            yield {"type": "error", "content": "Failed to initialize Claude"}
+            yield {
+                "type": "error",
+                "content": "Failed to initialize Claude"
+            }
             return
 
         # Start the conversation
@@ -201,10 +231,15 @@ class ExpandChatSession:
             yield {"type": "response_done"}
         except Exception:
             logger.exception("Failed to start expand chat")
-            yield {"type": "error", "content": "Failed to start conversation"}
+            yield {
+                "type": "error",
+                "content": "Failed to start conversation"
+            }
 
     async def send_message(
-        self, user_message: str, attachments: list[ImageAttachment] | None = None
+        self,
+        user_message: str,
+        attachments: list[ImageAttachment] | None = None
     ) -> AsyncGenerator[dict, None]:
         """
         Send user message and stream Claude's response.
@@ -221,18 +256,19 @@ class ExpandChatSession:
             - {"type": "error", "content": str}
         """
         if not self.client:
-            yield {"type": "error", "content": "Session not initialized. Call start() first."}
+            yield {
+                "type": "error",
+                "content": "Session not initialized. Call start() first."
+            }
             return
 
         # Store the user message
-        self.messages.append(
-            {
-                "role": "user",
-                "content": user_message,
-                "has_attachments": bool(attachments),
-                "timestamp": datetime.now().isoformat(),
-            }
-        )
+        self.messages.append({
+            "role": "user",
+            "content": user_message,
+            "has_attachments": bool(attachments),
+            "timestamp": datetime.now().isoformat()
+        })
 
         try:
             # Use lock to prevent concurrent queries from corrupting the response stream
@@ -242,15 +278,21 @@ class ExpandChatSession:
             yield {"type": "response_done"}
         except Exception:
             logger.exception("Error during Claude query")
-            yield {"type": "error", "content": "Error while processing message"}
+            yield {
+                "type": "error",
+                "content": "Error while processing message"
+            }
 
     async def _query_claude(
-        self, message: str, attachments: list[ImageAttachment] | None = None
+        self,
+        message: str,
+        attachments: list[ImageAttachment] | None = None
     ) -> AsyncGenerator[dict, None]:
         """
         Internal method to query Claude and stream responses.
 
-        Handles text responses and detects feature creation blocks.
+        Feature creation is handled by Claude calling the feature_create_bulk
+        MCP tool directly -- no text parsing needed.
         """
         if not self.client:
             return
@@ -261,23 +303,18 @@ class ExpandChatSession:
             if message:
                 content_blocks.append({"type": "text", "text": message})
             for att in attachments:
-                content_blocks.append(
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": att.mimeType,
-                            "data": att.base64Data,
-                        },
+                content_blocks.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": att.mimeType,
+                        "data": att.base64Data,
                     }
-                )
+                })
             await self.client.query(_make_multimodal_message(content_blocks))
             logger.info(f"Sent multimodal message with {len(attachments)} image(s)")
         else:
             await self.client.query(message)
-
-        # Accumulate full response to detect feature blocks
-        full_response = ""
 
         # Stream the response
         async for msg in self.client.receive_response():
@@ -290,120 +327,13 @@ class ExpandChatSession:
                     if block_type == "TextBlock" and hasattr(block, "text"):
                         text = block.text
                         if text:
-                            full_response += text
                             yield {"type": "text", "content": text}
 
-                            self.messages.append(
-                                {"role": "assistant", "content": text, "timestamp": datetime.now().isoformat()}
-                            )
-
-        # Check for feature creation blocks in full response (handle multiple blocks)
-        features_matches = re.findall(r"<features_to_create>\s*(\[[\s\S]*?\])\s*</features_to_create>", full_response)
-
-        if features_matches:
-            # Collect all features from all blocks, deduplicating by name
-            all_features: list[dict] = []
-            seen_names: set[str] = set()
-
-            for features_json in features_matches:
-                try:
-                    features_data = json.loads(features_json)
-
-                    if features_data and isinstance(features_data, list):
-                        for feature in features_data:
-                            name = feature.get("name", "")
-                            if name and name not in seen_names:
-                                seen_names.add(name)
-                                all_features.append(feature)
-                except json.JSONDecodeError as e:
-                    logger.error(f"Failed to parse features JSON block: {e}")
-                    # Continue processing other blocks
-
-            if all_features:
-                try:
-                    # Create all deduplicated features
-                    created = await self._create_features_bulk(all_features)
-
-                    if created:
-                        self.features_created += len(created)
-                        self.created_feature_ids.extend([f["id"] for f in created])
-
-                        yield {"type": "features_created", "count": len(created), "features": created}
-
-                        logger.info(f"Created {len(created)} features for {self.project_name}")
-                except Exception:
-                    logger.exception("Failed to create features")
-                    yield {"type": "error", "content": "Failed to create features"}
-
-    async def _create_features_bulk(self, features: list[dict]) -> list[dict]:
-        """
-        Create features directly in the database.
-
-        Args:
-            features: List of feature dictionaries with category, name, description, steps
-
-        Returns:
-            List of created feature dictionaries with IDs
-
-        Note:
-            Uses flush() to get IDs immediately without re-querying by priority range,
-            which could pick up rows from concurrent writers.
-        """
-        # Import database classes
-        import sys
-
-        root = Path(__file__).parent.parent.parent
-        if str(root) not in sys.path:
-            sys.path.insert(0, str(root))
-
-        from api.database import Feature, create_database
-
-        # Get database session
-        _, SessionLocal = create_database(self.project_dir)
-        session = SessionLocal()
-
-        try:
-            # Determine starting priority
-            max_priority_feature = session.query(Feature).order_by(Feature.priority.desc()).first()
-            current_priority = (max_priority_feature.priority + 1) if max_priority_feature else 1
-
-            created_rows: list = []
-
-            for f in features:
-                db_feature = Feature(
-                    priority=current_priority,
-                    category=f.get("category", "functional"),
-                    name=f.get("name", "Unnamed feature"),
-                    description=f.get("description", ""),
-                    steps=f.get("steps", []),
-                    passes=False,
-                    in_progress=False,
-                )
-                session.add(db_feature)
-                created_rows.append(db_feature)
-                current_priority += 1
-
-            # Flush to get IDs without relying on priority range query
-            session.flush()
-
-            # Build result from the flushed objects (IDs are now populated)
-            created_features = [
-                {
-                    "id": db_feature.id,
-                    "name": db_feature.name,
-                    "category": db_feature.category,
-                }
-                for db_feature in created_rows
-            ]
-
-            session.commit()
-            return created_features
-
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
+                            self.messages.append({
+                                "role": "assistant",
+                                "content": text,
+                                "timestamp": datetime.now().isoformat()
+                            })
 
     def get_features_created(self) -> int:
         """Get the total number of features created in this session."""
@@ -423,7 +353,7 @@ _expand_sessions: dict[str, ExpandChatSession] = {}
 _expand_sessions_lock = threading.Lock()
 
 
-def get_expand_session(project_name: str) -> ExpandChatSession | None:
+def get_expand_session(project_name: str) -> Optional[ExpandChatSession]:
     """Get an existing expansion session for a project."""
     with _expand_sessions_lock:
         return _expand_sessions.get(project_name)
@@ -431,7 +361,7 @@ def get_expand_session(project_name: str) -> ExpandChatSession | None:
 
 async def create_expand_session(project_name: str, project_dir: Path) -> ExpandChatSession:
     """Create a new expansion session for a project, closing any existing one."""
-    old_session: ExpandChatSession | None = None
+    old_session: Optional[ExpandChatSession] = None
 
     with _expand_sessions_lock:
         old_session = _expand_sessions.pop(project_name, None)
@@ -449,7 +379,7 @@ async def create_expand_session(project_name: str, project_dir: Path) -> ExpandC
 
 async def remove_expand_session(project_name: str) -> None:
     """Remove and close an expansion session."""
-    session: ExpandChatSession | None = None
+    session: Optional[ExpandChatSession] = None
 
     with _expand_sessions_lock:
         session = _expand_sessions.pop(project_name, None)
