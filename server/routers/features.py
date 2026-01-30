@@ -34,11 +34,13 @@ logger = logging.getLogger(__name__)
 def _get_project_path(project_name: str) -> Path:
     """Get project path from registry."""
     import sys
+
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
     from registry import get_project_path
+
     return get_project_path(project_name)
 
 
@@ -48,10 +50,12 @@ def _get_db_classes():
     if _create_database is None:
         import sys
         from pathlib import Path
+
         root = Path(__file__).parent.parent.parent
         if str(root) not in sys.path:
             sys.path.insert(0, str(root))
         from api.database import Feature, create_database
+
         _create_database = create_database
         _Feature = Feature
     return _create_database, _Feature
@@ -265,11 +269,7 @@ async def create_features_bulk(project_name: str, bulk: FeatureBulkCreate):
             if bulk.starting_priority is not None:
                 current_priority = bulk.starting_priority
             else:
-                max_priority_feature = (
-                    session.query(Feature)
-                    .order_by(Feature.priority.desc())
-                    .first()
-                )
+                max_priority_feature = session.query(Feature).order_by(Feature.priority.desc()).first()
                 current_priority = (max_priority_feature.priority + 1) if max_priority_feature else 1
 
             created_ids = []
@@ -294,15 +294,12 @@ async def create_features_bulk(project_name: str, bulk: FeatureBulkCreate):
 
             # Query created features by their IDs (avoids relying on priority range)
             created_features = []
-            for db_feature in session.query(Feature).filter(
-                Feature.id.in_(created_ids)
-            ).order_by(Feature.priority).all():
+            for db_feature in (
+                session.query(Feature).filter(Feature.id.in_(created_ids)).order_by(Feature.priority).all()
+            ):
                 created_features.append(feature_to_response(db_feature))
 
-            return FeatureBulkCreateResponse(
-                created=len(created_features),
-                features=created_features
-            )
+            return FeatureBulkCreateResponse(created=len(created_features), features=created_features)
     except HTTPException:
         raise
     except Exception:
@@ -353,14 +350,11 @@ async def get_dependency_graph(project_name: str):
                 else:
                     status = "pending"
 
-                nodes.append(DependencyGraphNode(
-                    id=f.id,
-                    name=f.name,
-                    category=f.category,
-                    status=status,
-                    priority=f.priority,
-                    dependencies=deps
-                ))
+                nodes.append(
+                    DependencyGraphNode(
+                        id=f.id, name=f.name, category=f.category, status=status, priority=f.priority, dependencies=deps
+                    )
+                )
 
                 for dep_id in deps:
                     edges.append({"source": dep_id, "target": f.id})
@@ -441,8 +435,7 @@ async def update_feature(project_name: str, feature_id: int, update: FeatureUpda
             # Prevent editing completed features
             if feature.passes:
                 raise HTTPException(
-                    status_code=400,
-                    detail="Cannot edit a completed feature. Features marked as done are immutable."
+                    status_code=400, detail="Cannot edit a completed feature. Features marked as done are immutable."
                 )
 
             # Apply updates for non-None fields
@@ -573,10 +566,12 @@ async def skip_feature(project_name: str, feature_id: int):
 def _get_dependency_resolver():
     """Lazy import of dependency resolver."""
     import sys
+
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
     from api.dependency_resolver import MAX_DEPENDENCIES_PER_FEATURE, would_create_circular_dependency
+
     return would_create_circular_dependency, MAX_DEPENDENCIES_PER_FEATURE
 
 
@@ -618,7 +613,9 @@ async def add_dependency(project_name: str, feature_id: int, dep_id: int):
 
             # Security: Limit check
             if len(current_deps) >= MAX_DEPENDENCIES_PER_FEATURE:
-                raise HTTPException(status_code=400, detail=f"Maximum {MAX_DEPENDENCIES_PER_FEATURE} dependencies allowed")
+                raise HTTPException(
+                    status_code=400, detail=f"Maximum {MAX_DEPENDENCIES_PER_FEATURE} dependencies allowed"
+                )
 
             if dep_id in current_deps:
                 raise HTTPException(status_code=400, detail="Dependency already exists")
@@ -731,8 +728,7 @@ async def set_dependencies(project_name: str, feature_id: int, update: Dependenc
                 # source_id = feature_id (gaining dep), target_id = dep_id (being depended upon)
                 if would_create_circular_dependency(test_features, feature_id, dep_id):
                     raise HTTPException(
-                        status_code=400,
-                        detail=f"Cannot add dependency {dep_id}: would create circular dependency"
+                        status_code=400, detail=f"Cannot add dependency {dep_id}: would create circular dependency"
                     )
 
             # Set dependencies

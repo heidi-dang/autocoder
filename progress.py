@@ -10,7 +10,7 @@ import json
 import os
 import sqlite3
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 WEBHOOK_URL = os.environ.get("PROGRESS_N8N_WEBHOOK_URL")
@@ -100,8 +100,7 @@ def count_passing_tests(project_dir: Path) -> tuple[int, int, int]:
             in_progress = 0
         conn.close()
         return passing, in_progress, total
-    except Exception as e:
-        print(f"[Database error in count_passing_tests: {e}]")
+    except Exception:
         return 0, 0, 0
 
 
@@ -122,13 +121,8 @@ def get_all_passing_features(project_dir: Path) -> list[dict]:
     try:
         conn = sqlite3.connect(db_file)
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, category, name FROM features WHERE passes = 1 ORDER BY priority ASC"
-        )
-        features = [
-            {"id": row[0], "category": row[1], "name": row[2]}
-            for row in cursor.fetchall()
-        ]
+        cursor.execute("SELECT id, category, name FROM features WHERE passes = 1 ORDER BY priority ASC")
+        features = [{"id": row[0], "category": row[1], "name": row[2]} for row in cursor.fetchall()]
         conn.close()
         return features
     except Exception:
@@ -187,7 +181,7 @@ def send_progress_webhook(passing: int, total: int, project_dir: Path) -> None:
             "tests_completed_this_session": passing - previous,
             "completed_tests": completed_tests,
             "project": project_dir.name,
-            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         }
 
         try:
@@ -197,31 +191,21 @@ def send_progress_webhook(passing: int, total: int, project_dir: Path) -> None:
                 headers={"Content-Type": "application/json"},
             )
             urllib.request.urlopen(req, timeout=5)
-        except Exception as e:
-            print(f"[Webhook notification failed: {e}]")
+        except Exception:
+            pass
 
         # Update cache with count and passing IDs
-        cache_file.write_text(
-            json.dumps({"count": passing, "passing_ids": current_passing_ids})
-        )
+        cache_file.write_text(json.dumps({"count": passing, "passing_ids": current_passing_ids}))
     else:
         # Update cache even if no change (for initial state)
         if not cache_file.exists():
             all_passing = get_all_passing_features(project_dir)
             current_passing_ids = [f.get("id") for f in all_passing]
-            cache_file.write_text(
-                json.dumps({"count": passing, "passing_ids": current_passing_ids})
-            )
+            cache_file.write_text(json.dumps({"count": passing, "passing_ids": current_passing_ids}))
 
 
 def print_session_header(session_num: int, is_initializer: bool) -> None:
     """Print a formatted header for the session."""
-    session_type = "INITIALIZER" if is_initializer else "CODING AGENT"
-
-    print("\n" + "=" * 70)
-    print(f"  SESSION {session_num}: {session_type}")
-    print("=" * 70)
-    print()
 
 
 def print_progress_summary(project_dir: Path) -> None:
@@ -233,7 +217,6 @@ def print_progress_summary(project_dir: Path) -> None:
         status_parts = [f"{passing}/{total} tests passing ({percentage:.1f}%)"]
         if in_progress > 0:
             status_parts.append(f"{in_progress} in progress")
-        print(f"\nProgress: {', '.join(status_parts)}")
         send_progress_webhook(passing, total, project_dir)
     else:
-        print("\nProgress: No features in database yet")
+        pass

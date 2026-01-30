@@ -6,14 +6,14 @@ SQLite database schema for feature storage using SQLAlchemy.
 """
 
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 
 def _utc_now() -> datetime:
     """Return current UTC time. Replacement for deprecated _utc_now()."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
+
 
 from sqlalchemy import (
     Boolean,
@@ -42,9 +42,7 @@ class Feature(Base):
 
     # Composite index for common status query pattern (passes, in_progress)
     # Used by feature_get_stats, get_ready_features, and other status queries
-    __table_args__ = (
-        Index('ix_feature_status', 'passes', 'in_progress'),
-    )
+    __table_args__ = (Index("ix_feature_status", "passes", "in_progress"),)
 
     id = Column(Integer, primary_key=True, index=True)
     priority = Column(Integer, nullable=False, default=999, index=True)
@@ -90,10 +88,10 @@ class Schedule(Base):
 
     # Database-level CHECK constraints for data integrity
     __table_args__ = (
-        CheckConstraint('duration_minutes >= 1 AND duration_minutes <= 1440', name='ck_schedule_duration'),
-        CheckConstraint('days_of_week >= 0 AND days_of_week <= 127', name='ck_schedule_days'),
-        CheckConstraint('max_concurrency >= 1 AND max_concurrency <= 5', name='ck_schedule_concurrency'),
-        CheckConstraint('crash_count >= 0', name='ck_schedule_crash_count'),
+        CheckConstraint("duration_minutes >= 1 AND duration_minutes <= 1440", name="ck_schedule_duration"),
+        CheckConstraint("days_of_week >= 0 AND days_of_week <= 127", name="ck_schedule_days"),
+        CheckConstraint("max_concurrency >= 1 AND max_concurrency <= 5", name="ck_schedule_concurrency"),
+        CheckConstraint("crash_count >= 0", name="ck_schedule_crash_count"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -121,9 +119,7 @@ class Schedule(Base):
     created_at = Column(DateTime, nullable=False, default=_utc_now)
 
     # Relationships
-    overrides = relationship(
-        "ScheduleOverride", back_populates="schedule", cascade="all, delete-orphan"
-    )
+    overrides = relationship("ScheduleOverride", back_populates="schedule", cascade="all, delete-orphan")
 
     def to_dict(self) -> dict:
         """Convert schedule to dictionary for JSON serialization."""
@@ -153,9 +149,7 @@ class ScheduleOverride(Base):
     __tablename__ = "schedule_overrides"
 
     id = Column(Integer, primary_key=True, index=True)
-    schedule_id = Column(
-        Integer, ForeignKey("schedules.id", ondelete="CASCADE"), nullable=False
-    )
+    schedule_id = Column(Integer, ForeignKey("schedules.id", ondelete="CASCADE"), nullable=False)
 
     # Override details
     override_type = Column(String(10), nullable=False)  # "start" or "stop"
@@ -269,6 +263,7 @@ def _is_network_path(path: Path) -> bool:
         # Mapped network drives - check if the drive is a network drive
         try:
             import ctypes
+
             drive = path_str[:2]  # e.g., "Z:"
             if len(drive) == 2 and drive[1] == ":":
                 # DRIVE_REMOTE = 4
@@ -280,7 +275,7 @@ def _is_network_path(path: Path) -> bool:
     else:
         # Unix: Check mount type via /proc/mounts or mount command
         try:
-            with open("/proc/mounts", "r") as f:
+            with open("/proc/mounts") as f:
                 mounts = f.read()
                 # Check each mount point to find which one contains our path
                 for line in mounts.splitlines():
@@ -318,17 +313,13 @@ def _migrate_add_schedules_tables(engine) -> None:
         columns = [c["name"] for c in inspector.get_columns("schedules")]
         if "crash_count" not in columns:
             with engine.connect() as conn:
-                conn.execute(
-                    text("ALTER TABLE schedules ADD COLUMN crash_count INTEGER DEFAULT 0")
-                )
+                conn.execute(text("ALTER TABLE schedules ADD COLUMN crash_count INTEGER DEFAULT 0"))
                 conn.commit()
 
         # Add max_concurrency column if missing (for upgrades)
         if "max_concurrency" not in columns:
             with engine.connect() as conn:
-                conn.execute(
-                    text("ALTER TABLE schedules ADD COLUMN max_concurrency INTEGER DEFAULT 3")
-                )
+                conn.execute(text("ALTER TABLE schedules ADD COLUMN max_concurrency INTEGER DEFAULT 3"))
                 conn.commit()
 
 
@@ -343,10 +334,13 @@ def create_database(project_dir: Path) -> tuple:
         Tuple of (engine, SessionLocal)
     """
     db_url = get_database_url(project_dir)
-    engine = create_engine(db_url, connect_args={
-        "check_same_thread": False,
-        "timeout": 30  # Wait up to 30s for locks
-    })
+    engine = create_engine(
+        db_url,
+        connect_args={
+            "check_same_thread": False,
+            "timeout": 30,  # Wait up to 30s for locks
+        },
+    )
     Base.metadata.create_all(bind=engine)
 
     # Choose journal mode based on filesystem type
@@ -373,7 +367,7 @@ def create_database(project_dir: Path) -> tuple:
 
 
 # Global session maker - will be set when server starts
-_session_maker: Optional[sessionmaker] = None
+_session_maker: sessionmaker | None = None
 
 
 def set_session_maker(session_maker: sessionmaker) -> None:

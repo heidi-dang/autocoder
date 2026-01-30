@@ -13,10 +13,10 @@ import platform
 import shutil
 import threading
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Set
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ class TerminalSession:
         self.project_dir = project_dir
 
         # PTY process references (platform-specific)
-        self._pty_process: "WinPtyProcess | None" = None  # Windows winpty
+        self._pty_process: WinPtyProcess | None = None  # Windows winpty
         self._master_fd: int | None = None  # Unix master file descriptor
         self._child_pid: int | None = None  # Unix child process PID
 
@@ -118,7 +118,7 @@ class TerminalSession:
         self._output_task: asyncio.Task | None = None
 
         # Output callbacks with thread-safe access
-        self._output_callbacks: Set[Callable[[bytes], None]] = set()
+        self._output_callbacks: set[Callable[[bytes], None]] = set()
         self._callbacks_lock = threading.Lock()
 
     @property
@@ -211,9 +211,7 @@ class TerminalSession:
         if not WINPTY_AVAILABLE:
             logger.error("Cannot start terminal: winpty package not available")
             # This error will be caught and sent to the client
-            raise RuntimeError(
-                "Terminal requires pywinpty on Windows. Install with: pip install pywinpty"
-            )
+            raise RuntimeError("Terminal requires pywinpty on Windows. Install with: pip install pywinpty")
 
         try:
             # WinPtyProcess.spawn expects the shell command
@@ -600,8 +598,7 @@ def rename_terminal(project_name: str, terminal_id: str, new_name: str) -> bool:
                 old_name = terminal.name
                 terminal.name = new_name
                 logger.info(
-                    f"Renamed terminal '{old_name}' to '{new_name}' "
-                    f"(ID: {terminal_id}) for project {project_name}"
+                    f"Renamed terminal '{old_name}' to '{new_name}' (ID: {terminal_id}) for project {project_name}"
                 )
                 return True
         return False
@@ -624,10 +621,7 @@ def delete_terminal(project_name: str, terminal_id: str) -> bool:
         for i, terminal in enumerate(terminals):
             if terminal.id == terminal_id:
                 terminals.pop(i)
-                logger.info(
-                    f"Deleted terminal '{terminal.name}' (ID: {terminal_id}) "
-                    f"for project {project_name}"
-                )
+                logger.info(f"Deleted terminal '{terminal.name}' (ID: {terminal_id}) for project {project_name}")
                 break
         else:
             return False
@@ -641,9 +635,7 @@ def delete_terminal(project_name: str, terminal_id: str) -> bool:
     return True
 
 
-def get_terminal_session(
-    project_name: str, project_dir: Path, terminal_id: str | None = None
-) -> TerminalSession:
+def get_terminal_session(project_name: str, project_dir: Path, terminal_id: str | None = None) -> TerminalSession:
     """
     Get or create a terminal session for a project (thread-safe).
 

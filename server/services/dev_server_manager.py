@@ -17,9 +17,10 @@ import re
 import subprocess
 import sys
 import threading
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Awaitable, Callable, Literal, Set
+from typing import Literal
 
 import psutil
 
@@ -30,18 +31,18 @@ logger = logging.getLogger(__name__)
 
 # Patterns for sensitive data that should be redacted from output
 SENSITIVE_PATTERNS = [
-    r'sk-[a-zA-Z0-9]{20,}',  # Anthropic API keys
-    r'ANTHROPIC_API_KEY=[^\s]+',
-    r'api[_-]?key[=:][^\s]+',
-    r'token[=:][^\s]+',
-    r'password[=:][^\s]+',
-    r'secret[=:][^\s]+',
-    r'ghp_[a-zA-Z0-9]{36,}',  # GitHub personal access tokens
-    r'gho_[a-zA-Z0-9]{36,}',  # GitHub OAuth tokens
-    r'ghs_[a-zA-Z0-9]{36,}',  # GitHub server tokens
-    r'ghr_[a-zA-Z0-9]{36,}',  # GitHub refresh tokens
-    r'aws[_-]?access[_-]?key[=:][^\s]+',  # AWS keys
-    r'aws[_-]?secret[=:][^\s]+',
+    r"sk-[a-zA-Z0-9]{20,}",  # Anthropic API keys
+    r"ANTHROPIC_API_KEY=[^\s]+",
+    r"api[_-]?key[=:][^\s]+",
+    r"token[=:][^\s]+",
+    r"password[=:][^\s]+",
+    r"secret[=:][^\s]+",
+    r"ghp_[a-zA-Z0-9]{36,}",  # GitHub personal access tokens
+    r"gho_[a-zA-Z0-9]{36,}",  # GitHub OAuth tokens
+    r"ghs_[a-zA-Z0-9]{36,}",  # GitHub server tokens
+    r"ghr_[a-zA-Z0-9]{36,}",  # GitHub refresh tokens
+    r"aws[_-]?access[_-]?key[=:][^\s]+",  # AWS keys
+    r"aws[_-]?secret[=:][^\s]+",
 ]
 
 # Patterns to detect URLs in dev server output
@@ -52,16 +53,16 @@ SENSITIVE_PATTERNS = [
 #   - Local: http://localhost:3000
 #   - http://localhost:3000/api/docs
 URL_PATTERNS = [
-    r'https?://(?:localhost|127\.0\.0\.1):\d+(?:/[^\s]*)?',
-    r'https?://\[::1\]:\d+(?:/[^\s]*)?',  # IPv6 localhost
-    r'https?://0\.0\.0\.0:\d+(?:/[^\s]*)?',  # Bound to all interfaces
+    r"https?://(?:localhost|127\.0\.0\.1):\d+(?:/[^\s]*)?",
+    r"https?://\[::1\]:\d+(?:/[^\s]*)?",  # IPv6 localhost
+    r"https?://0\.0\.0\.0:\d+(?:/[^\s]*)?",  # Bound to all interfaces
 ]
 
 
 def sanitize_output(line: str) -> str:
     """Remove sensitive information from output lines."""
     for pattern in SENSITIVE_PATTERNS:
-        line = re.sub(pattern, '[REDACTED]', line, flags=re.IGNORECASE)
+        line = re.sub(pattern, "[REDACTED]", line, flags=re.IGNORECASE)
     return line
 
 
@@ -109,8 +110,8 @@ class DevServerProcessManager:
         self._command: str | None = None  # Store the command used to start
 
         # Support multiple callbacks (for multiple WebSocket clients)
-        self._output_callbacks: Set[Callable[[str], Awaitable[None]]] = set()
-        self._status_callbacks: Set[Callable[[str], Awaitable[None]]] = set()
+        self._output_callbacks: set[Callable[[str], Awaitable[None]]] = set()
+        self._status_callbacks: set[Callable[[str], Awaitable[None]]] = set()
         self._callbacks_lock = threading.Lock()
 
         # Lock file to prevent multiple instances (stored in project directory)
@@ -249,9 +250,7 @@ class DevServerProcessManager:
             loop = asyncio.get_running_loop()
             while True:
                 # Use run_in_executor for blocking readline
-                line = await loop.run_in_executor(
-                    None, self.process.stdout.readline
-                )
+                line = await loop.run_in_executor(None, self.process.stdout.readline)
                 if not line:
                     break
 
@@ -263,10 +262,7 @@ class DevServerProcessManager:
                     url = extract_url(decoded)
                     if url:
                         self._detected_url = url
-                        logger.info(
-                            "Dev server URL detected for %s: %s",
-                            self.project_name, url
-                        )
+                        logger.info("Dev server URL detected for %s: %s", self.project_name, url)
 
                 await self._broadcast_output(sanitized)
 
@@ -378,8 +374,10 @@ class DevServerProcessManager:
             result = await loop.run_in_executor(None, kill_process_tree, proc, 5.0)
             logger.debug(
                 "Process tree kill result: status=%s, children=%d (terminated=%d, killed=%d)",
-                result.status, result.children_found,
-                result.children_terminated, result.children_killed
+                result.status,
+                result.children_found,
+                result.children_terminated,
+                result.children_killed,
             )
 
             self._remove_lock()
@@ -501,10 +499,7 @@ def cleanup_orphaned_devserver_locks() -> int:
                         proc = psutil.Process(pid)
                         if proc.is_running():
                             # Process is still running, don't remove
-                            logger.info(
-                                "Found running dev server for project '%s' (PID %d)",
-                                name, pid
-                            )
+                            logger.info("Found running dev server for project '%s' (PID %d)", name, pid)
                             continue
                     except (psutil.NoSuchProcess, psutil.AccessDenied):
                         pass
@@ -516,9 +511,7 @@ def cleanup_orphaned_devserver_locks() -> int:
 
             except (ValueError, OSError) as e:
                 # Invalid lock file content - remove it
-                logger.warning(
-                    "Removing invalid dev server lock file for project '%s': %s", name, e
-                )
+                logger.warning("Removing invalid dev server lock file for project '%s': %s", name, e)
                 lock_file.unlink(missing_ok=True)
                 cleaned += 1
 

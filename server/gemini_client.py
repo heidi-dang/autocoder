@@ -9,7 +9,7 @@ Environment variables:
 """
 
 import os
-from typing import AsyncGenerator, Iterable, Optional
+from collections.abc import AsyncGenerator, Iterable
 
 from google import genai
 from google.genai import types
@@ -33,9 +33,9 @@ def _get_client() -> genai.Client:
 async def stream_chat(
     user_message: str,
     *,
-    system_prompt: Optional[str] = None,
-    model: Optional[str] = None,
-    extra_messages: Optional[Iterable[dict]] = None,
+    system_prompt: str | None = None,
+    model: str | None = None,
+    extra_messages: Iterable[dict] | None = None,
 ) -> AsyncGenerator[str, None]:
     """
     Stream a chat completion from Gemini using native generateContent API.
@@ -50,21 +50,17 @@ async def stream_chat(
     """
     client = _get_client()
     model_name = model or DEFAULT_GEMINI_MODEL
-    
+
     # Build contents list
     contents = []
-    
+
     # Add system instruction as first user message if provided
     if system_prompt:
-        contents.append(types.Content(
-            role="user",
-            parts=[types.Part(text=system_prompt)]
-        ))
-        contents.append(types.Content(
-            role="model",
-            parts=[types.Part(text="Understood. I'll follow these instructions.")]
-        ))
-    
+        contents.append(types.Content(role="user", parts=[types.Part(text=system_prompt)]))
+        contents.append(
+            types.Content(role="model", parts=[types.Part(text="Understood. I'll follow these instructions.")])
+        )
+
     # Add message history
     if extra_messages:
         for msg in extra_messages:
@@ -75,17 +71,11 @@ async def stream_chat(
                 role = "model"
             elif role == "system":
                 continue  # Already handled above
-            contents.append(types.Content(
-                role=role,
-                parts=[types.Part(text=content)]
-            ))
-    
+            contents.append(types.Content(role=role, parts=[types.Part(text=content)]))
+
     # Add user message
-    contents.append(types.Content(
-        role="user",
-        parts=[types.Part(text=user_message)]
-    ))
-    
+    contents.append(types.Content(role="user", parts=[types.Part(text=user_message)]))
+
     try:
         # Stream the response using generateContent
         response = await client.aio.models.generate_content(
@@ -93,9 +83,9 @@ async def stream_chat(
             contents=contents,
             config=types.GenerateContentConfig(
                 temperature=0.7,
-            )
+            ),
         )
-        
+
         async for chunk in response:
             if chunk.text:
                 yield chunk.text

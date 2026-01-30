@@ -1,0 +1,48 @@
+# Ruff ignore patterns
+# These directories are excluded from ruff checks
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Node modules
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build outputs
+dist/
+.vite/
+.next/
+out/
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# Generated files
+.env
+.env.local
+.env.*.local

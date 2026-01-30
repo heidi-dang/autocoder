@@ -355,7 +355,7 @@ The agent tried to run a command not in the allowlist. This is the security syst
 ### Branch protection
 To require the “PR Check” workflow before merging:
 - GitHub UI: Settings → Branches → Add rule for `main` (and `master` if used) → enable **Require status checks to pass before merging** → select `PR Check` → save.
-- GitHub CLI:  
+- GitHub CLI:
   ```bash
   gh api -X PUT repos/<owner>/<repo>/branches/main/protection \
     -F required_status_checks.strict=true \

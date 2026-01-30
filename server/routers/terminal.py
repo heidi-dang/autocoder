@@ -131,15 +131,11 @@ async def list_project_terminals(project_name: str) -> list[TerminalInfoResponse
         info = create_terminal(project_name)
         terminals = [info]
 
-    return [
-        TerminalInfoResponse(id=t.id, name=t.name, created_at=t.created_at) for t in terminals
-    ]
+    return [TerminalInfoResponse(id=t.id, name=t.name, created_at=t.created_at) for t in terminals]
 
 
 @router.post("/{project_name}")
-async def create_project_terminal(
-    project_name: str, request: CreateTerminalRequest
-) -> TerminalInfoResponse:
+async def create_project_terminal(project_name: str, request: CreateTerminalRequest) -> TerminalInfoResponse:
     """
     Create a new terminal for a project.
 
@@ -251,16 +247,12 @@ async def terminal_websocket(websocket: WebSocket, project_name: str, terminal_i
     """
     # Validate project name
     if not validate_project_name(project_name):
-        await websocket.close(
-            code=TerminalCloseCode.INVALID_PROJECT_NAME, reason="Invalid project name"
-        )
+        await websocket.close(code=TerminalCloseCode.INVALID_PROJECT_NAME, reason="Invalid project name")
         return
 
     # Validate terminal ID
     if not validate_terminal_id(terminal_id):
-        await websocket.close(
-            code=TerminalCloseCode.INVALID_PROJECT_NAME, reason="Invalid terminal ID"
-        )
+        await websocket.close(code=TerminalCloseCode.INVALID_PROJECT_NAME, reason="Invalid terminal ID")
         return
 
     # Look up project directory from registry
@@ -388,18 +380,14 @@ async def terminal_websocket(websocket: WebSocket, project_name: str, terminal_i
                             decoded = base64.b64decode(encoded_data)
                         except (ValueError, TypeError) as e:
                             logger.warning(f"Failed to decode base64 input: {e}")
-                            await websocket.send_json(
-                                {"type": "error", "message": "Invalid base64 data"}
-                            )
+                            await websocket.send_json({"type": "error", "message": "Invalid base64 data"})
                             continue
 
                         try:
                             session.write(decoded)
                         except Exception as e:
                             logger.warning(f"Failed to write to terminal: {e}")
-                            await websocket.send_json(
-                                {"type": "error", "message": "Failed to write to terminal"}
-                            )
+                            await websocket.send_json({"type": "error", "message": "Failed to write to terminal"})
 
                 elif msg_type == "resize":
                     # Resize the terminal

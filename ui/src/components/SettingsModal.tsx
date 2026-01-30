@@ -37,7 +37,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { data: modelsData } = useAvailableModels();
   const updateSettings = useUpdateSettings();
   const { theme, setTheme, darkMode, toggleDarkMode } = useTheme();
-  
+
   const [ollamaModels, setOllamaModels] = useState<Array<{ name: string; size: number }>>([]);
   const [loadingOllamaModels, setLoadingOllamaModels] = useState(false);
   const [ollamaTestResult, setOllamaTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -102,7 +102,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       updateSettings.mutate({ testing_agent_ratio: ratio });
     }
   };
-  
+
   const handleProviderChange = (provider: string) => {
     if (!updateSettings.isPending) {
       updateSettings.mutate({ ai_provider: provider });
@@ -252,7 +252,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   )}
                 </button>
               </div>
-              
+
               {/* Ollama Setup Wizard Button */}
               {settings.ai_provider === "local" && (
                 <Button
@@ -318,7 +318,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       Refresh
                     </Button>
                   </div>
-                  
+
                   {loadingOllamaModels ? (
                     <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
                       <Loader2 className="animate-spin mr-2" size={16} />
@@ -357,7 +357,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             {settings.ai_provider === "cloud" && (
               <div className="space-y-3">
                 <Label className="font-medium">Cloud API Model</Label>
-                
+
                 {/* Claude API */}
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Claude (Anthropic)</Label>
@@ -411,7 +411,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Gemini API Key Configuration */}
                 {models.some((model) => model.id.includes("gemini")) && (
                   <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
@@ -450,7 +450,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             )}
 
             <hr className="border-border" />
-            
+
             {/* YOLO Mode Toggle */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
@@ -511,12 +511,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <DialogHeader>
             <DialogTitle>Ollama Setup Assistant</DialogTitle>
           </DialogHeader>
-          <OllamaSetupWizard 
+          <OllamaSetupWizard
             onComplete={() => {
               setShowOllamaWizard(false);
               refetch(); // Reload settings
               loadOllamaModels(); // Reload models
-            }} 
+            }}
           />
         </DialogContent>
       </Dialog>

@@ -50,6 +50,7 @@ def _validate_project_dir(project_dir: Path) -> Path:
 
     return resolved
 
+
 # =============================================================================
 # Type Definitions
 # =============================================================================
@@ -57,6 +58,7 @@ def _validate_project_dir(project_dir: Path) -> Path:
 
 class ProjectConfig(TypedDict):
     """Full project configuration response."""
+
     detected_type: str | None
     detected_command: str | None
     custom_command: str | None
@@ -113,14 +115,11 @@ def _load_config(project_dir: Path) -> dict:
         return {}
 
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             config = json.load(f)
 
         if not isinstance(config, dict):
-            logger.warning(
-                "Invalid config format in %s: expected dict, got %s",
-                config_path, type(config).__name__
-            )
+            logger.warning("Invalid config format in %s: expected dict, got %s", config_path, type(config).__name__)
             return {}
 
         return config
@@ -181,7 +180,7 @@ def _parse_package_json(project_dir: Path) -> dict | None:
         return None
 
     try:
-        with open(package_json_path, "r", encoding="utf-8") as f:
+        with open(package_json_path, encoding="utf-8") as f:
             data = json.load(f)
             if isinstance(data, dict):
                 return data

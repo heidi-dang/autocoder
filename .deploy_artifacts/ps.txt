@@ -1,5 +1,5 @@
 == ps ==
 NAME                    IMAGE                    COMMAND                  SERVICE     CREATED         STATUS                        PORTS
-autocoder-api-1         autocoder-api            "uvicorn server.main…"   api         8 hours ago     Exited (0) 54 minutes ago     
+autocoder-api-1         autocoder-api            "uvicorn server.main…"   api         8 hours ago     Exited (0) 54 minutes ago
 autocoder-autocoder-1   autocoder-local:latest   "uvicorn server.main…"   autocoder   5 minutes ago   Up 5 minutes                  0.0.0.0:8888->8888/tcp, [::]:8888->8888/tcp
-autocoder-ui-1          autocoder-ui             "docker-entrypoint.s…"   ui          8 hours ago     Exited (143) 54 minutes ago   
+autocoder-ui-1          autocoder-ui             "docker-entrypoint.s…"   ui          8 hours ago     Exited (143) 54 minutes ago

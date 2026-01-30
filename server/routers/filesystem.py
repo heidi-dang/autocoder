@@ -12,7 +12,7 @@ import re
 import sys
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query
 
 from ..schemas import (
     CreateDirectoryRequest,
@@ -116,11 +116,11 @@ UNIVERSAL_BLOCKED_RELATIVE = {
 
 # Patterns for files that should not be shown
 HIDDEN_PATTERNS = [
-    r"^\.env",           # .env files
-    r".*\.key$",         # Key files
-    r".*\.pem$",         # PEM files
+    r"^\.env",  # .env files
+    r".*\.key$",  # Key files
+    r".*\.pem$",  # PEM files
     r".*credentials.*",  # Credential files
-    r".*secrets.*",      # Secrets files
+    r".*secrets.*",  # Secrets files
 ]
 
 
@@ -199,13 +199,14 @@ def is_hidden_file(path: Path) -> bool:
     name = path.name
 
     # Unix-style: starts with dot
-    if name.startswith('.'):
+    if name.startswith("."):
         return True
 
     # Windows: check FILE_ATTRIBUTE_HIDDEN
     if sys.platform == "win32":
         try:
             import ctypes
+
             attrs = ctypes.windll.kernel32.GetFileAttributesW(str(path))
             if attrs != -1 and (attrs & 0x02):  # FILE_ATTRIBUTE_HIDDEN
                 return True
@@ -232,6 +233,7 @@ def is_unc_path(path_str: str) -> bool:
 # Endpoints
 # =============================================================================
 
+
 @router.get("/list", response_model=DirectoryListResponse)
 async def list_directory(
     path: str | None = Query(None, description="Directory path to list (defaults to home)"),
@@ -250,10 +252,7 @@ async def list_directory(
         # Security: Block UNC paths
         if is_unc_path(path):
             logger.warning("Blocked UNC path access attempt: %s", path)
-            raise HTTPException(
-                status_code=403,
-                detail="Network paths (UNC) are not allowed"
-            )
+            raise HTTPException(status_code=403, detail="Network paths (UNC) are not allowed")
         target = Path(path)
 
     # Resolve symlinks and get absolute path
@@ -271,10 +270,7 @@ async def list_directory(
         logger.warning("Blocked access to restricted path: %s", target)
         raise HTTPException(
             status_code=403,
-            detail=(
-                f"Access to this directory is not allowed. "
-                f"Allowed roots: {_allowed_roots_display()}"
-            ),
+            detail=(f"Access to this directory is not allowed. Allowed roots: {_allowed_roots_display()}"),
         )
 
     # Check if path exists and is a directory
@@ -318,14 +314,16 @@ async def list_directory(
                     except (PermissionError, OSError):
                         pass  # Can't read = assume no children
 
-                    entries.append(DirectoryEntry(
-                        name=item.name,
-                        path=item.as_posix(),
-                        is_directory=True,
-                        is_hidden=hidden,
-                        size=None,
-                        has_children=has_children,
-                    ))
+                    entries.append(
+                        DirectoryEntry(
+                            name=item.name,
+                            path=item.as_posix(),
+                            is_directory=True,
+                            is_hidden=hidden,
+                            size=None,
+                            has_children=has_children,
+                        )
+                    )
                 except Exception:
                     pass  # Skip items we can't process
 
@@ -386,10 +384,7 @@ def get_windows_drives() -> list[DriveInfo]:
                     # Try to get volume label
                     volume_name = ctypes.create_unicode_buffer(1024)
                     ctypes.windll.kernel32.GetVolumeInformationW(
-                        drive_path,
-                        volume_name,
-                        1024,
-                        None, None, None, None, 0
+                        drive_path, volume_name, 1024, None, None, None, None, 0
                     )
                     label = volume_name.value or f"Local Disk ({letter}:)"
                 except Exception:
@@ -398,11 +393,13 @@ def get_windows_drives() -> list[DriveInfo]:
                 # Check if drive is accessible
                 available = os.path.exists(drive_path)
 
-                drives.append(DriveInfo(
-                    letter=letter,
-                    label=label,
-                    available=available,
-                ))
+                drives.append(
+                    DriveInfo(
+                        letter=letter,
+                        label=label,
+                        available=available,
+                    )
+                )
     except Exception:
         # Fallback: just list C: drive
         drives.append(DriveInfo(letter="C", label="Local Disk (C:)", available=True))
@@ -451,10 +448,7 @@ async def validate_path(path: str = Query(..., description="Path to validate")) 
             is_directory=target.is_dir() if target.exists() else False,
             can_read=False,
             can_write=False,
-            message=(
-                "Access to this directory is not allowed. "
-                f"Allowed roots: {_allowed_roots_display()}"
-            ),
+            message=(f"Access to this directory is not allowed. Allowed roots: {_allowed_roots_display()}"),
         )
 
     exists = target.exists()
@@ -503,19 +497,13 @@ async def create_directory(request: CreateDirectoryRequest):
         raise HTTPException(status_code=400, detail="Directory name cannot be empty")
 
     # Security: Block special directory names that could enable traversal
-    if name in ('.', '..') or '..' in name:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid directory name"
-        )
+    if name in (".", "..") or ".." in name:
+        raise HTTPException(status_code=400, detail="Invalid directory name")
 
     # Security: Check for invalid characters
-    invalid_chars = '<>:"/\\|?*' if sys.platform == "win32" else '/'
+    invalid_chars = '<>:"/\\|?*' if sys.platform == "win32" else "/"
     if any(c in name for c in invalid_chars):
-        raise HTTPException(
-            status_code=400,
-            detail="Directory name contains invalid characters"
-        )
+        raise HTTPException(status_code=400, detail="Directory name contains invalid characters")
 
     # Security: Block UNC paths
     if is_unc_path(request.parent_path):
@@ -531,10 +519,7 @@ async def create_directory(request: CreateDirectoryRequest):
     # Superuser check not available without Request injection
 
     if not is_super and is_path_blocked(parent):
-        raise HTTPException(
-            status_code=403,
-            detail="Cannot create directory in this location"
-        )
+        raise HTTPException(status_code=403, detail="Cannot create directory in this location")
 
     # Check parent exists and is writable
     if not parent.exists():

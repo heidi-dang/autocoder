@@ -78,25 +78,18 @@ def check_hook(command: str, should_block: bool) -> bool:
     was_blocked = result.get("decision") == "block"
 
     if was_blocked == should_block:
-        status = "PASS"
+        pass
     else:
-        status = "FAIL"
-        expected = "blocked" if should_block else "allowed"
-        actual = "blocked" if was_blocked else "allowed"
         reason = result.get("reason", "")
-        print(f"  {status}: {command!r}")
-        print(f"         Expected: {expected}, Got: {actual}")
         if reason:
-            print(f"         Reason: {reason}")
+            pass
         return False
 
-    print(f"  {status}: {command!r}")
     return True
 
 
 def test_extract_commands():
     """Test the command extraction logic."""
-    print("\nTesting command extraction:\n")
     passed = 0
     failed = 0
 
@@ -112,11 +105,8 @@ def test_extract_commands():
     for cmd, expected in test_cases:
         result = extract_commands(cmd)
         if result == expected:
-            print(f"  PASS: {cmd!r} -> {result}")
             passed += 1
         else:
-            print(f"  FAIL: {cmd!r}")
-            print(f"         Expected: {expected}, Got: {result}")
             failed += 1
 
     return passed, failed
@@ -124,7 +114,6 @@ def test_extract_commands():
 
 def test_validate_chmod():
     """Test chmod command validation."""
-    print("\nTesting chmod validation:\n")
     passed = 0
     failed = 0
 
@@ -151,15 +140,10 @@ def test_validate_chmod():
     for cmd, should_allow, description in test_cases:
         allowed, reason = validate_chmod_command(cmd)
         if allowed == should_allow:
-            print(f"  PASS: {cmd!r} ({description})")
             passed += 1
         else:
-            expected = "allowed" if should_allow else "blocked"
-            actual = "allowed" if allowed else "blocked"
-            print(f"  FAIL: {cmd!r} ({description})")
-            print(f"         Expected: {expected}, Got: {actual}")
             if reason:
-                print(f"         Reason: {reason}")
+                pass
             failed += 1
 
     return passed, failed
@@ -167,7 +151,6 @@ def test_validate_chmod():
 
 def test_validate_init_script():
     """Test init.sh script execution validation."""
-    print("\nTesting init.sh validation:\n")
     passed = 0
     failed = 0
 
@@ -190,15 +173,10 @@ def test_validate_init_script():
     for cmd, should_allow, description in test_cases:
         allowed, reason = validate_init_script(cmd)
         if allowed == should_allow:
-            print(f"  PASS: {cmd!r} ({description})")
             passed += 1
         else:
-            expected = "allowed" if should_allow else "blocked"
-            actual = "allowed" if allowed else "blocked"
-            print(f"  FAIL: {cmd!r} ({description})")
-            print(f"         Expected: {expected}, Got: {actual}")
             if reason:
-                print(f"         Reason: {reason}")
+                pass
             failed += 1
 
     return passed, failed
@@ -206,7 +184,6 @@ def test_validate_init_script():
 
 def test_pattern_matching():
     """Test command pattern matching."""
-    print("\nTesting pattern matching:\n")
     passed = 0
     failed = 0
 
@@ -216,33 +193,28 @@ def test_pattern_matching():
         ("swift", "swift", True, "exact match"),
         ("npm", "npm", True, "exact npm"),
         ("xcodebuild", "xcodebuild", True, "exact xcodebuild"),
-
         # Prefix wildcards
         ("swiftc", "swift*", True, "swiftc matches swift*"),
         ("swiftlint", "swift*", True, "swiftlint matches swift*"),
         ("swiftformat", "swift*", True, "swiftformat matches swift*"),
         ("swift", "swift*", True, "swift matches swift*"),
         ("npm", "swift*", False, "npm doesn't match swift*"),
-
         # Bare wildcard (security: should NOT match anything)
         ("npm", "*", False, "bare wildcard doesn't match npm"),
         ("sudo", "*", False, "bare wildcard doesn't match sudo"),
         ("anything", "*", False, "bare wildcard doesn't match anything"),
-
         # Local script paths (with ./ prefix)
         ("build.sh", "./scripts/build.sh", True, "script name matches path"),
         ("./scripts/build.sh", "./scripts/build.sh", True, "exact script path"),
         ("scripts/build.sh", "./scripts/build.sh", True, "relative script path"),
         ("/abs/path/scripts/build.sh", "./scripts/build.sh", True, "absolute path matches"),
         ("test.sh", "./scripts/build.sh", False, "different script name"),
-
         # Path patterns (without ./ prefix - new behavior)
         ("test.sh", "scripts/test.sh", True, "script name matches path pattern"),
         ("scripts/test.sh", "scripts/test.sh", True, "exact path pattern match"),
         ("/abs/path/scripts/test.sh", "scripts/test.sh", True, "absolute path matches pattern"),
         ("build.sh", "scripts/test.sh", False, "different script name in pattern"),
         ("integration.test.js", "tests/integration.test.js", True, "script with dots matches"),
-
         # Non-matches
         ("go", "swift*", False, "go doesn't match swift*"),
         ("rustc", "swift*", False, "rustc doesn't match swift*"),
@@ -251,13 +223,8 @@ def test_pattern_matching():
     for command, pattern, should_match, description in test_cases:
         result = matches_pattern(command, pattern)
         if result == should_match:
-            print(f"  PASS: {command!r} vs {pattern!r} ({description})")
             passed += 1
         else:
-            expected = "match" if should_match else "no match"
-            actual = "match" if result else "no match"
-            print(f"  FAIL: {command!r} vs {pattern!r} ({description})")
-            print(f"         Expected: {expected}, Got: {actual}")
             failed += 1
 
     return passed, failed
@@ -265,7 +232,6 @@ def test_pattern_matching():
 
 def test_yaml_loading():
     """Test YAML config loading and validation."""
-    print("\nTesting YAML loading:\n")
     passed = 0
     failed = 0
 
@@ -287,33 +253,24 @@ commands:
 """)
         config = load_project_commands(project_dir)
         if config and config["version"] == 1 and len(config["commands"]) == 3:
-            print("  PASS: Load valid YAML")
             passed += 1
         else:
-            print("  FAIL: Load valid YAML")
-            print(f"         Got: {config}")
             failed += 1
 
         # Test 2: Missing file returns None
         (project_dir / ".autocoder" / "allowed_commands.yaml").unlink()
         config = load_project_commands(project_dir)
         if config is None:
-            print("  PASS: Missing file returns None")
             passed += 1
         else:
-            print("  FAIL: Missing file returns None")
-            print(f"         Got: {config}")
             failed += 1
 
         # Test 3: Invalid YAML returns None
         config_path.write_text("invalid: yaml: content:")
         config = load_project_commands(project_dir)
         if config is None:
-            print("  PASS: Invalid YAML returns None")
             passed += 1
         else:
-            print("  FAIL: Invalid YAML returns None")
-            print(f"         Got: {config}")
             failed += 1
 
         # Test 4: Over limit (100 commands)
@@ -321,11 +278,8 @@ commands:
         config_path.write_text("version: 1\ncommands:\n" + "\n".join(commands))
         config = load_project_commands(project_dir)
         if config is None:
-            print("  PASS: Over limit rejected")
             passed += 1
         else:
-            print("  FAIL: Over limit rejected")
-            print(f"         Got: {config}")
             failed += 1
 
     return passed, failed
@@ -333,7 +287,6 @@ commands:
 
 def test_command_validation():
     """Test project command validation."""
-    print("\nTesting command validation:\n")
     passed = 0
     failed = 0
 
@@ -344,16 +297,13 @@ def test_command_validation():
         ({"name": "swift"}, True, "command without description"),
         ({"name": "swift*", "description": "All Swift tools"}, True, "pattern command"),
         ({"name": "./scripts/build.sh", "description": "Build script"}, True, "local script"),
-
         # Invalid commands
         ({}, False, "missing name"),
         ({"description": "No name"}, False, "missing name field"),
         ({"name": ""}, False, "empty name"),
         ({"name": 123}, False, "non-string name"),
-
         # Security: Bare wildcard not allowed
         ({"name": "*"}, False, "bare wildcard rejected"),
-
         # Blocklisted commands
         ({"name": "sudo"}, False, "blocklisted sudo"),
         ({"name": "shutdown"}, False, "blocklisted shutdown"),
@@ -363,15 +313,10 @@ def test_command_validation():
     for cmd_config, should_be_valid, description in test_cases:
         valid, error = validate_project_command(cmd_config)
         if valid == should_be_valid:
-            print(f"  PASS: {description}")
             passed += 1
         else:
-            expected = "valid" if should_be_valid else "invalid"
-            actual = "valid" if valid else "invalid"
-            print(f"  FAIL: {description}")
-            print(f"         Expected: {expected}, Got: {actual}")
             if error:
-                print(f"         Error: {error}")
+                pass
             failed += 1
 
     return passed, failed
@@ -379,7 +324,6 @@ def test_command_validation():
 
 def test_blocklist_enforcement():
     """Test blocklist enforcement in security hook."""
-    print("\nTesting blocklist enforcement:\n")
     passed = 0
     failed = 0
 
@@ -388,10 +332,8 @@ def test_blocklist_enforcement():
         input_data = {"tool_name": "Bash", "tool_input": {"command": cmd}}
         result = asyncio.run(bash_security_hook(input_data))
         if result.get("decision") == "block":
-            print(f"  PASS: Blocked {cmd.split()[0]}")
             passed += 1
         else:
-            print(f"  FAIL: Should block {cmd.split()[0]}")
             failed += 1
 
     return passed, failed
@@ -399,7 +341,6 @@ def test_blocklist_enforcement():
 
 def test_project_commands():
     """Test project-specific commands in security hook."""
-    print("\nTesting project-specific commands:\n")
     passed = 0
     failed = 0
 
@@ -425,32 +366,24 @@ commands:
         context = {"project_dir": str(project_dir)}
         result = asyncio.run(bash_security_hook(input_data, context=context))
         if result.get("decision") != "block":
-            print("  PASS: Project command 'swift' allowed")
             passed += 1
         else:
-            print("  FAIL: Project command 'swift' should be allowed")
-            print(f"         Reason: {result.get('reason')}")
             failed += 1
 
         # Test 2: Pattern match should work
         input_data = {"tool_name": "Bash", "tool_input": {"command": "swiftlint"}}
         result = asyncio.run(bash_security_hook(input_data, context=context))
         if result.get("decision") != "block":
-            print("  PASS: Pattern 'swift*' matches 'swiftlint'")
             passed += 1
         else:
-            print("  FAIL: Pattern 'swift*' should match 'swiftlint'")
-            print(f"         Reason: {result.get('reason')}")
             failed += 1
 
         # Test 3: Non-allowed command should be blocked
         input_data = {"tool_name": "Bash", "tool_input": {"command": "rustc"}}
         result = asyncio.run(bash_security_hook(input_data, context=context))
         if result.get("decision") == "block":
-            print("  PASS: Non-allowed command 'rustc' blocked")
             passed += 1
         else:
-            print("  FAIL: Non-allowed command 'rustc' should be blocked")
             failed += 1
 
     return passed, failed
@@ -458,7 +391,6 @@ commands:
 
 def test_org_config_loading():
     """Test organization-level config loading."""
-    print("\nTesting org config loading:\n")
     passed = 0
     failed = 0
 
@@ -481,24 +413,18 @@ blocked_commands:
             config = load_org_config()
             if config and config["version"] == 1:
                 if len(config["allowed_commands"]) == 1 and len(config["blocked_commands"]) == 2:
-                    print("  PASS: Load valid org config")
                     passed += 1
                 else:
-                    print("  FAIL: Load valid org config (wrong counts)")
                     failed += 1
             else:
-                print("  FAIL: Load valid org config")
-                print(f"         Got: {config}")
                 failed += 1
 
             # Test 2: Missing file returns None
             org_config_path.unlink()
             config = load_org_config()
             if config is None:
-                print("  PASS: Missing org config returns None")
                 passed += 1
             else:
-                print("  FAIL: Missing org config returns None")
                 failed += 1
 
             # Test 3: Non-string command name is rejected
@@ -509,11 +435,8 @@ allowed_commands:
 """)
             config = load_org_config()
             if config is None:
-                print("  PASS: Non-string command name rejected")
                 passed += 1
             else:
-                print("  FAIL: Non-string command name rejected")
-                print(f"         Got: {config}")
                 failed += 1
 
             # Test 4: Empty command name is rejected
@@ -524,11 +447,8 @@ allowed_commands:
 """)
             config = load_org_config()
             if config is None:
-                print("  PASS: Empty command name rejected")
                 passed += 1
             else:
-                print("  FAIL: Empty command name rejected")
-                print(f"         Got: {config}")
                 failed += 1
 
             # Test 5: Whitespace-only command name is rejected
@@ -539,11 +459,8 @@ allowed_commands:
 """)
             config = load_org_config()
             if config is None:
-                print("  PASS: Whitespace-only command name rejected")
                 passed += 1
             else:
-                print("  FAIL: Whitespace-only command name rejected")
-                print(f"         Got: {config}")
                 failed += 1
 
     return passed, failed
@@ -551,7 +468,6 @@ allowed_commands:
 
 def test_hierarchy_resolution():
     """Test command hierarchy resolution."""
-    print("\nTesting hierarchy resolution:\n")
     passed = 0
     failed = 0
 
@@ -590,44 +506,32 @@ commands:
                 # Test 1: Org allowed commands are included
                 allowed, blocked = get_effective_commands(project_dir)
                 if "jq" in allowed and "python3" in allowed:
-                    print("  PASS: Org allowed commands included")
                     passed += 1
                 else:
-                    print("  FAIL: Org allowed commands included")
-                    print(f"         jq in allowed: {'jq' in allowed}")
-                    print(f"         python3 in allowed: {'python3' in allowed}")
                     failed += 1
 
                 # Test 2: Org blocked commands are in blocklist
                 if "terraform" in blocked and "kubectl" in blocked:
-                    print("  PASS: Org blocked commands in blocklist")
                     passed += 1
                 else:
-                    print("  FAIL: Org blocked commands in blocklist")
                     failed += 1
 
                 # Test 3: Project commands are included
                 if "swift" in allowed:
-                    print("  PASS: Project commands included")
                     passed += 1
                 else:
-                    print("  FAIL: Project commands included")
                     failed += 1
 
                 # Test 4: Global commands are included
                 if "npm" in allowed and "git" in allowed:
-                    print("  PASS: Global commands included")
                     passed += 1
                 else:
-                    print("  FAIL: Global commands included")
                     failed += 1
 
                 # Test 5: Hardcoded blocklist cannot be overridden
                 if "sudo" in blocked and "shutdown" in blocked:
-                    print("  PASS: Hardcoded blocklist enforced")
                     passed += 1
                 else:
-                    print("  FAIL: Hardcoded blocklist enforced")
                     failed += 1
 
     return passed, failed
@@ -635,7 +539,6 @@ commands:
 
 def test_org_blocklist_enforcement():
     """Test that org-level blocked commands cannot be used."""
-    print("\nTesting org blocklist enforcement:\n")
     passed = 0
     failed = 0
 
@@ -663,10 +566,8 @@ blocked_commands:
                 result = asyncio.run(bash_security_hook(input_data, context=context))
 
                 if result.get("decision") == "block":
-                    print("  PASS: Org blocked command 'terraform' rejected")
                     passed += 1
                 else:
-                    print("  FAIL: Org blocked command 'terraform' should be rejected")
                     failed += 1
 
     return passed, failed
@@ -674,44 +575,35 @@ blocked_commands:
 
 def test_pkill_extensibility():
     """Test that pkill processes can be extended via config."""
-    print("\nTesting pkill process extensibility:\n")
     passed = 0
     failed = 0
 
     # Test 1: Default processes work without config
     allowed, reason = validate_pkill_command("pkill node")
     if allowed:
-        print("  PASS: Default process 'node' allowed")
         passed += 1
     else:
-        print(f"  FAIL: Default process 'node' should be allowed: {reason}")
         failed += 1
 
     # Test 2: Non-default process blocked without config
     allowed, reason = validate_pkill_command("pkill python")
     if not allowed:
-        print("  PASS: Non-default process 'python' blocked without config")
         passed += 1
     else:
-        print("  FAIL: Non-default process 'python' should be blocked without config")
         failed += 1
 
     # Test 3: Extra processes allowed when passed
     allowed, reason = validate_pkill_command("pkill python", extra_processes={"python"})
     if allowed:
-        print("  PASS: Extra process 'python' allowed when configured")
         passed += 1
     else:
-        print(f"  FAIL: Extra process 'python' should be allowed when configured: {reason}")
         failed += 1
 
     # Test 4: Default processes still work with extra processes
     allowed, reason = validate_pkill_command("pkill npm", extra_processes={"python"})
     if allowed:
-        print("  PASS: Default process 'npm' still works with extra processes")
         passed += 1
     else:
-        print(f"  FAIL: Default process should still work: {reason}")
         failed += 1
 
     # Test 5: Test get_effective_pkill_processes with org config
@@ -734,10 +626,8 @@ pkill_processes:
 
                 # Should include defaults + org processes
                 if "node" in processes and "python" in processes and "uvicorn" in processes:
-                    print("  PASS: Org pkill_processes merged with defaults")
                     passed += 1
                 else:
-                    print(f"  FAIL: Expected node, python, uvicorn in {processes}")
                     failed += 1
 
     # Test 6: Test get_effective_pkill_processes with project config
@@ -761,10 +651,8 @@ pkill_processes:
 
                 # Should include defaults + project processes
                 if "node" in processes and "gunicorn" in processes and "flask" in processes:
-                    print("  PASS: Project pkill_processes merged with defaults")
                     passed += 1
                 else:
-                    print(f"  FAIL: Expected node, gunicorn, flask in {processes}")
                     failed += 1
 
     # Test 7: Integration test - pkill python blocked by default
@@ -777,10 +665,8 @@ pkill_processes:
                 result = asyncio.run(bash_security_hook(input_data, context=context))
 
                 if result.get("decision") == "block":
-                    print("  PASS: pkill python blocked without config")
                     passed += 1
                 else:
-                    print("  FAIL: pkill python should be blocked without config")
                     failed += 1
 
     # Test 8: Integration test - pkill python allowed with org config
@@ -802,10 +688,8 @@ pkill_processes:
                 result = asyncio.run(bash_security_hook(input_data, context=context))
 
                 if result.get("decision") != "block":
-                    print("  PASS: pkill python allowed with org config")
                     passed += 1
                 else:
-                    print(f"  FAIL: pkill python should be allowed with org config: {result}")
                     failed += 1
 
     # Test 9: Regex metacharacters should be rejected in pkill_processes
@@ -824,10 +708,8 @@ pkill_processes:
 
                 config = load_org_config()
                 if config is None:
-                    print("  PASS: Regex pattern '.*' rejected in pkill_processes")
                     passed += 1
                 else:
-                    print("  FAIL: Regex pattern '.*' should be rejected")
                     failed += 1
 
     # Test 10: Valid process names with dots/underscores/hyphens should be accepted
@@ -848,10 +730,8 @@ pkill_processes:
 
                 config = load_org_config()
                 if config is not None and config.get("pkill_processes") == ["my-app", "app_server", "node.js"]:
-                    print("  PASS: Valid process names with dots/underscores/hyphens accepted")
                     passed += 1
                 else:
-                    print(f"  FAIL: Valid process names should be accepted: {config}")
                     failed += 1
 
     # Test 11: Names with spaces should be rejected
@@ -869,48 +749,36 @@ pkill_processes:
 
                 config = load_org_config()
                 if config is None:
-                    print("  PASS: Process name with space rejected")
                     passed += 1
                 else:
-                    print("  FAIL: Process name with space should be rejected")
                     failed += 1
 
     # Test 12: Multiple patterns - all must be allowed (BSD behavior)
     # On BSD, "pkill node sshd" would kill both, so we must validate all patterns
     allowed, reason = validate_pkill_command("pkill node npm")
     if allowed:
-        print("  PASS: Multiple allowed patterns accepted")
         passed += 1
     else:
-        print(f"  FAIL: Multiple allowed patterns should be accepted: {reason}")
         failed += 1
 
     # Test 13: Multiple patterns - block if any is disallowed
     allowed, reason = validate_pkill_command("pkill node sshd")
     if not allowed:
-        print("  PASS: Multiple patterns blocked when one is disallowed")
         passed += 1
     else:
-        print("  FAIL: Should block when any pattern is disallowed")
         failed += 1
 
     # Test 14: Multiple patterns - only first allowed, second disallowed
     allowed, reason = validate_pkill_command("pkill npm python")
     if not allowed:
-        print("  PASS: Multiple patterns blocked (first allowed, second not)")
         passed += 1
     else:
-        print("  FAIL: Should block when second pattern is disallowed")
         failed += 1
 
     return passed, failed
 
 
 def main():
-    print("=" * 70)
-    print("  SECURITY HOOK TESTS")
-    print("=" * 70)
-
     passed = 0
     failed = 0
 
@@ -975,7 +843,6 @@ def main():
     failed += pkill_failed
 
     # Commands that SHOULD be blocked
-    print("\nCommands that should be BLOCKED:\n")
     dangerous = [
         # Not in allowlist - dangerous system commands
         "shutdown now",
@@ -1009,7 +876,6 @@ def main():
             failed += 1
 
     # Commands that SHOULD be allowed
-    print("\nCommands that should be ALLOWED:\n")
     safe = [
         # File inspection
         "ls -la",
@@ -1079,15 +945,10 @@ def main():
             failed += 1
 
     # Summary
-    print("\n" + "-" * 70)
-    print(f"  Results: {passed} passed, {failed} failed")
-    print("-" * 70)
 
     if failed == 0:
-        print("\n  ALL TESTS PASSED")
         return 0
     else:
-        print(f"\n  {failed} TEST(S) FAILED")
         return 1
 
 

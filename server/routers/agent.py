@@ -18,11 +18,13 @@ from ..services.process_manager import get_manager
 def _get_project_path(project_name: str) -> Path:
     """Get project path from registry."""
     import sys
+
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
     from registry import get_project_path
+
     return get_project_path(project_name)
 
 
@@ -33,6 +35,7 @@ def _get_settings_defaults() -> tuple[bool, str, int]:
         Tuple of (yolo_mode, model, testing_agent_ratio)
     """
     import sys
+
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
@@ -60,11 +63,8 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 
 def validate_project_name(name: str) -> str:
     """Validate and sanitize project name to prevent path traversal."""
-    if not re.match(r'^[a-zA-Z0-9_-]{1,50}$', name):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid project name"
-        )
+    if not re.match(r"^[a-zA-Z0-9_-]{1,50}$", name):
+        raise HTTPException(status_code=400, detail="Invalid project name")
     return name
 
 
@@ -116,7 +116,9 @@ async def start_agent(
     yolo_mode = request.yolo_mode if request.yolo_mode is not None else default_yolo
     model = request.model if request.model else default_model
     max_concurrency = request.max_concurrency or 1
-    testing_agent_ratio = request.testing_agent_ratio if request.testing_agent_ratio is not None else default_testing_ratio
+    testing_agent_ratio = (
+        request.testing_agent_ratio if request.testing_agent_ratio is not None else default_testing_ratio
+    )
 
     success, message = await manager.start(
         yolo_mode=yolo_mode,
@@ -128,6 +130,7 @@ async def start_agent(
     # Notify scheduler of manual start (to prevent auto-stop during scheduled window)
     if success:
         from ..services.scheduler_service import get_scheduler
+
         project_dir = _get_project_path(project_name)
         if project_dir:
             get_scheduler().notify_manual_start(project_name, project_dir)
@@ -149,6 +152,7 @@ async def stop_agent(project_name: str):
     # Notify scheduler of manual stop (to prevent auto-start during scheduled window)
     if success:
         from ..services.scheduler_service import get_scheduler
+
         project_dir = _get_project_path(project_name)
         if project_dir:
             get_scheduler().notify_manual_stop(project_name, project_dir)

@@ -109,7 +109,8 @@ Authentication:
 
     # Unified orchestrator mode (replaces --parallel)
     parser.add_argument(
-        "--concurrency", "-c",
+        "--concurrency",
+        "-c",
         type=int,
         default=1,
         help="Number of concurrent coding agents (default: 1, max: 5)",
@@ -117,7 +118,8 @@ Authentication:
 
     # Backward compatibility: --parallel is deprecated alias for --concurrency
     parser.add_argument(
-        "--parallel", "-p",
+        "--parallel",
+        "-p",
         type=int,
         nargs="?",
         const=3,
@@ -161,7 +163,6 @@ Authentication:
 
 def main() -> None:
     """Main entry point."""
-    print("[ENTRY] autonomous_agent_demo.py starting...", flush=True)
     args = parse_args()
 
     # Note: Authentication is handled by start.bat/start.sh before this script runs.
@@ -169,7 +170,6 @@ def main() -> None:
 
     # Handle deprecated --parallel flag
     if args.parallel is not None:
-        print("WARNING: --parallel is deprecated. Use --concurrency instead.", flush=True)
         args.concurrency = args.parallel
 
     # Resolve project directory:
@@ -181,7 +181,6 @@ def main() -> None:
     if project_dir.is_absolute():
         # Absolute path provided - use directly
         if not project_dir.exists():
-            print(f"Error: Project directory does not exist: {project_dir}")
             return
     else:
         # Treat as a project name - look up from registry
@@ -189,8 +188,6 @@ def main() -> None:
         if registered_path:
             project_dir = registered_path
         else:
-            print(f"Error: Project '{project_dir_input}' not found in registry")
-            print("Use an absolute path or register the project first.")
             return
 
     try:
@@ -214,7 +211,7 @@ def main() -> None:
             # Clamp concurrency to valid range (1-5)
             concurrency = max(1, min(args.concurrency, 5))
             if concurrency != args.concurrency:
-                print(f"Clamping concurrency to valid range: {concurrency}", flush=True)
+                pass
 
             asyncio.run(
                 run_parallel_orchestrator(
@@ -226,10 +223,8 @@ def main() -> None:
                 )
             )
     except KeyboardInterrupt:
-        print("\n\nInterrupted by user")
-        print("To resume, run the same command again")
-    except Exception as e:
-        print(f"\nFatal error: {e}")
+        pass
+    except Exception:
         raise
 
 

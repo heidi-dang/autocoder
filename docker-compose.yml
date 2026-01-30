@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     env_file:
-      - .env
+    - .env
     environment:
       # Docker port-forwarded requests appear from the bridge gateway
       # (e.g., 172.17.0.1), so strict localhost-only mode blocks them.
@@ -19,14 +19,14 @@ services:
       # (useful when Ollama runs on the host at port 11434).
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://172.18.0.1:11434}
     ports:
-      - "8888:8888"
+    - 8888:8888
     restart: unless-stopped
     volumes:
-      - autocoder-data:/root/.autocoder
-      - /opt/autocoder/projects:/projects
-      - /opt/autocoder:/workspace:ro
+    - autocoder-data:/root/.autocoder
+    - /opt/autocoder/projects:/projects
+    - /opt/autocoder:/workspace:ro
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+    - host.docker.internal:host-gateway
     command: uvicorn server.main:app --host 0.0.0.0 --port 8888
 
 volumes:

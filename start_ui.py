@@ -44,8 +44,6 @@ UI_DIR = ROOT / "ui"
 
 def print_step(step: int, total: int, message: str) -> None:
     """Print a formatted step message."""
-    print(f"\n[{step}/{total}] {message}")
-    print("-" * 50)
 
 
 def find_available_port(start: int = 8888, max_attempts: int = 10) -> int:
@@ -81,10 +79,8 @@ def run_command(cmd: list, cwd: Path | None = None, check: bool = True) -> bool:
 def setup_python_venv() -> bool:
     """Create Python virtual environment if it doesn't exist."""
     if VENV_DIR.exists() and get_venv_python().exists():
-        print("  Virtual environment already exists")
         return True
 
-    print("  Creating virtual environment...")
     return run_command([sys.executable, "-m", "venv", str(VENV_DIR)])
 
 
@@ -94,17 +90,11 @@ def install_python_deps() -> bool:
     requirements = ROOT / "requirements.txt"
 
     if not requirements.exists():
-        print("  ERROR: requirements.txt not found")
         return False
 
-    print("  Installing Python dependencies...")
-    return run_command([
-        str(venv_python), "-m", "pip", "install",
-        "-q", "--upgrade", "pip"
-    ]) and run_command([
-        str(venv_python), "-m", "pip", "install",
-        "-q", "-r", str(requirements)
-    ])
+    return run_command([str(venv_python), "-m", "pip", "install", "-q", "--upgrade", "pip"]) and run_command(
+        [str(venv_python), "-m", "pip", "install", "-q", "-r", str(requirements)]
+    )
 
 
 def check_node() -> bool:
@@ -113,23 +103,14 @@ def check_node() -> bool:
     npm = shutil.which("npm")
 
     if not node:
-        print("  ERROR: Node.js not found")
-        print("  Please install Node.js from https://nodejs.org")
         return False
 
     if not npm:
-        print("  ERROR: npm not found")
-        print("  Please install Node.js from https://nodejs.org")
         return False
 
     # Get version
     try:
-        result = subprocess.run(
-            ["node", "--version"],
-            capture_output=True,
-            text=True
-        )
-        print(f"  Node.js version: {result.stdout.strip()}")
+        subprocess.run(["node", "--version"], capture_output=True, text=True)
     except Exception:
         pass
 
@@ -141,10 +122,8 @@ def install_npm_deps() -> bool:
     node_modules = UI_DIR / "node_modules"
 
     if node_modules.exists():
-        print("  npm dependencies already installed")
         return True
 
-    print("  Installing npm dependencies (this may take a few minutes)...")
     npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
     return run_command([npm_cmd, "install"], cwd=UI_DIR)
 
@@ -229,12 +208,10 @@ def build_frontend() -> bool:
             trigger_file = "dist/ directory is empty"
 
     if not needs_build:
-        print("  Frontend already built (up to date)")
         return True
 
     if trigger_file:
-        print(f"  Rebuild triggered by: {trigger_file}")
-    print("  Building React frontend...")
+        pass
     npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
     return run_command([npm_cmd, "run", "build"], cwd=UI_DIR)
 
@@ -243,31 +220,23 @@ def start_dev_server(port: int, host: str = "127.0.0.1") -> tuple:
     """Start both Vite and FastAPI in development mode."""
     venv_python = get_venv_python()
 
-    print("\n  Starting development servers...")
-    print(f"  - FastAPI backend: http://{host}:{port}")
-    print("  - Vite frontend:   http://127.0.0.1:5173")
-
     # Set environment for remote access if needed
     env = os.environ.copy()
     if host != "127.0.0.1":
         env["AUTOCODER_ALLOW_REMOTE"] = "1"
 
     # Start FastAPI
-    backend = subprocess.Popen([
-        str(venv_python), "-m", "uvicorn",
-        "server.main:app",
-        "--host", host,
-        "--port", str(port),
-        "--reload"
-    ], cwd=str(ROOT), env=env)
+    backend = subprocess.Popen(
+        [str(venv_python), "-m", "uvicorn", "server.main:app", "--host", host, "--port", str(port), "--reload"],
+        cwd=str(ROOT),
+        env=env,
+    )
 
     # Start Vite with API port env var for proxy configuration
     npm_cmd = "npm.cmd" if sys.platform == "win32" else "npm"
     vite_env = env.copy()
     vite_env["VITE_API_PORT"] = str(port)
-    frontend = subprocess.Popen([
-        npm_cmd, "run", "dev"
-    ], cwd=str(UI_DIR), env=vite_env)
+    frontend = subprocess.Popen([npm_cmd, "run", "dev"], cwd=str(UI_DIR), env=vite_env)
 
     return backend, frontend
 
@@ -275,8 +244,6 @@ def start_dev_server(port: int, host: str = "127.0.0.1") -> tuple:
 def start_production_server(port: int, host: str = "127.0.0.1"):
     """Start FastAPI server in production mode."""
     venv_python = get_venv_python()
-
-    print(f"\n  Starting server at http://{host}:{port}")
 
     env = os.environ.copy()
 
@@ -288,12 +255,20 @@ def start_production_server(port: int, host: str = "127.0.0.1"):
     # support (uvicorn's reload worker doesn't inherit the ProactorEventLoop policy).
     # This affects Claude SDK which uses asyncio.create_subprocess_exec.
     # For development with hot reload, use: python start_ui.py --dev
-    return subprocess.Popen([
-        str(venv_python), "-m", "uvicorn",
-        "server.main:app",
-        "--host", host,
-        "--port", str(port),
-    ], cwd=str(ROOT), env=env)
+    return subprocess.Popen(
+        [
+            str(venv_python),
+            "-m",
+            "uvicorn",
+            "server.main:app",
+            "--host",
+            host,
+            "--port",
+            str(port),
+        ],
+        cwd=str(ROOT),
+        env=env,
+    )
 
 
 def main() -> None:
@@ -309,38 +284,24 @@ def main() -> None:
 
     # Security warning for remote access
     if host != "127.0.0.1":
-        print("\n" + "!" * 50)
-        print("  SECURITY WARNING")
-        print("!" * 50)
-        print(f"  Remote access enabled on host: {host}")
-        print("  The AutoCoder UI will be accessible from other machines.")
-        print("  Ensure you understand the security implications:")
-        print("  - The agent has file system access to project directories")
-        print("  - The API can start/stop agents and modify files")
-        print("  - Consider using a firewall or VPN for protection")
-        print("!" * 50 + "\n")
-
-    print("=" * 50)
-    print("  AutoCoder UI Setup")
-    print("=" * 50)
+        pass
 
     total_steps = 6 if not dev_mode else 5
 
     # Step 1: Python venv
     print_step(1, total_steps, "Setting up Python environment")
     if not setup_python_venv():
-        print("ERROR: Failed to create virtual environment")
         sys.exit(1)
 
     # Step 2: Python dependencies
     print_step(2, total_steps, "Installing Python dependencies")
     if not install_python_deps():
-        print("ERROR: Failed to install Python dependencies")
         sys.exit(1)
 
     # Load environment variables now that dotenv is installed
     try:
         from dotenv import load_dotenv
+
         load_dotenv(ROOT / ".env")
     except ImportError:
         pass  # dotenv is optional for basic functionality
@@ -353,14 +314,12 @@ def main() -> None:
     # Step 4: npm dependencies
     print_step(4, total_steps, "Installing npm dependencies")
     if not install_npm_deps():
-        print("ERROR: Failed to install npm dependencies")
         sys.exit(1)
 
     # Step 5: Build frontend (production only)
     if not dev_mode:
         print_step(5, total_steps, "Building frontend")
         if not build_frontend():
-            print("ERROR: Failed to build frontend")
             sys.exit(1)
 
     # Step 6: Start server
@@ -377,19 +336,15 @@ def main() -> None:
             time.sleep(3)
             webbrowser.open("http://127.0.0.1:5173")
 
-            print("\n" + "=" * 50)
-            print("  Development mode active")
             if host != "127.0.0.1":
-                print(f"  Backend accessible at: http://{host}:{port}")
-            print("  Press Ctrl+C to stop")
-            print("=" * 50)
+                pass
 
             try:
                 # Wait for either process to exit
                 while backend.poll() is None and frontend.poll() is None:
                     time.sleep(1)
             except KeyboardInterrupt:
-                print("\n\nShutting down...")
+                pass
             finally:
                 backend.terminate()
                 frontend.terminate()
@@ -403,20 +358,13 @@ def main() -> None:
             if host == "127.0.0.1":
                 webbrowser.open(f"http://127.0.0.1:{port}")
 
-            print("\n" + "=" * 50)
-            print(f"  Server running at http://{host}:{port}")
-            print("  Press Ctrl+C to stop")
-            print("=" * 50)
-
             try:
                 server.wait()
             except KeyboardInterrupt:
-                print("\n\nShutting down...")
                 server.terminate()
                 server.wait()
 
-    except Exception as e:
-        print(f"\nERROR: {e}")
+    except Exception:
         sys.exit(1)
 
 

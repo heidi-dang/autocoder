@@ -59,10 +59,7 @@ def kill_process_tree(proc: subprocess.Popen, timeout: float = 5.0) -> KillResul
         children = parent.children(recursive=True)
         result.children_found = len(children)
 
-        logger.debug(
-            "Killing process tree: PID %d with %d children",
-            proc.pid, len(children)
-        )
+        logger.debug("Killing process tree: PID %d with %d children", proc.pid, len(children))
 
         # Terminate children first (graceful)
         for child in children:
@@ -78,10 +75,7 @@ def kill_process_tree(proc: subprocess.Popen, timeout: float = 5.0) -> KillResul
         gone, still_alive = psutil.wait_procs(children, timeout=timeout)
         result.children_terminated = len(gone)
 
-        logger.debug(
-            "Children after graceful wait: %d terminated, %d still alive",
-            len(gone), len(still_alive)
-        )
+        logger.debug("Children after graceful wait: %d terminated, %d still alive", len(gone), len(still_alive))
 
         # Force kill any remaining children
         for child in still_alive:
@@ -110,8 +104,10 @@ def kill_process_tree(proc: subprocess.Popen, timeout: float = 5.0) -> KillResul
 
         logger.debug(
             "Process tree kill complete: status=%s, children=%d (terminated=%d, killed=%d)",
-            result.status, result.children_found,
-            result.children_terminated, result.children_killed
+            result.status,
+            result.children_found,
+            result.children_terminated,
+            result.children_killed,
         )
 
     except (psutil.NoSuchProcess, psutil.AccessDenied) as e:

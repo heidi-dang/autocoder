@@ -9,7 +9,6 @@ Allows adding multiple features to existing projects via natural language.
 import json
 import logging
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ValidationError
@@ -35,22 +34,24 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 def _get_project_path(project_name: str) -> Path:
     """Get project path from registry."""
     import sys
+
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
     from registry import get_project_path
+
     return get_project_path(project_name)
-
-
 
 
 # ============================================================================
 # REST Endpoints
 # ============================================================================
 
+
 class ExpandSessionStatus(BaseModel):
     """Status of an expansion session."""
+
     project_name: str
     is_active: bool
     is_complete: bool
@@ -99,6 +100,7 @@ async def cancel_expand_session(project_name: str):
 # WebSocket Endpoint
 # ============================================================================
 
+
 @router.websocket("/ws/{project_name}")
 async def expand_project_websocket(websocket: WebSocket, project_name: str):
     """
@@ -143,7 +145,7 @@ async def expand_project_websocket(websocket: WebSocket, project_name: str):
 
     await websocket.accept()
 
-    session: Optional[ExpandChatSession] = None
+    session: ExpandChatSession | None = None
 
     try:
         while True:
@@ -162,10 +164,12 @@ async def expand_project_websocket(websocket: WebSocket, project_name: str):
                     existing_session = get_expand_session(project_name)
                     if existing_session:
                         session = existing_session
-                        await websocket.send_json({
-                            "type": "text",
-                            "content": "Resuming existing expansion session. What would you like to add?"
-                        })
+                        await websocket.send_json(
+                            {
+                                "type": "text",
+                                "content": "Resuming existing expansion session. What would you like to add?",
+                            }
+                        )
                         await websocket.send_json({"type": "response_done"})
                     else:
                         # Create and start a new expansion session
@@ -180,10 +184,9 @@ async def expand_project_websocket(websocket: WebSocket, project_name: str):
                     if not session:
                         session = get_expand_session(project_name)
                         if not session:
-                            await websocket.send_json({
-                                "type": "error",
-                                "content": "No active session. Send 'start' first."
-                            })
+                            await websocket.send_json(
+                                {"type": "error", "content": "No active session. Send 'start' first."}
+                            )
                             continue
 
                     user_content = message.get("content", "").strip()
@@ -197,18 +200,12 @@ async def expand_project_websocket(websocket: WebSocket, project_name: str):
                                 attachments.append(ImageAttachment(**raw_att))
                         except (ValidationError, Exception) as e:
                             logger.warning(f"Invalid attachment data: {e}")
-                            await websocket.send_json({
-                                "type": "error",
-                                "content": "Invalid attachment format"
-                            })
+                            await websocket.send_json({"type": "error", "content": "Invalid attachment format"})
                             continue
 
                     # Allow empty content if attachments are present
                     if not user_content and not attachments:
-                        await websocket.send_json({
-                            "type": "error",
-                            "content": "Empty message"
-                        })
+                        await websocket.send_json({"type": "error", "content": "Empty message"})
                         continue
 
                     # Stream Claude's response
@@ -218,22 +215,15 @@ async def expand_project_websocket(websocket: WebSocket, project_name: str):
                 elif msg_type == "done":
                     # User is done adding features
                     if session:
-                        await websocket.send_json({
-                            "type": "expansion_complete",
-                            "total_added": session.get_features_created()
-                        })
+                        await websocket.send_json(
+                            {"type": "expansion_complete", "total_added": session.get_features_created()}
+                        )
 
                 else:
-                    await websocket.send_json({
-                        "type": "error",
-                        "content": f"Unknown message type: {msg_type}"
-                    })
+                    await websocket.send_json({"type": "error", "content": f"Unknown message type: {msg_type}"})
 
             except json.JSONDecodeError:
-                await websocket.send_json({
-                    "type": "error",
-                    "content": "Invalid JSON"
-                })
+                await websocket.send_json({"type": "error", "content": "Invalid JSON"})
 
     except WebSocketDisconnect:
         logger.info(f"Expand chat WebSocket disconnected for {project_name}")
@@ -241,10 +231,7 @@ async def expand_project_websocket(websocket: WebSocket, project_name: str):
     except Exception:
         logger.exception(f"Expand chat WebSocket error for {project_name}")
         try:
-            await websocket.send_json({
-                "type": "error",
-                "content": "Internal server error"
-            })
+            await websocket.send_json({"type": "error", "content": "Internal server error"})
         except Exception:
             pass
 

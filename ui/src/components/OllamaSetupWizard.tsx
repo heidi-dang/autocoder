@@ -4,12 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Download, 
-  RefreshCw, 
-  Terminal, 
+import {
+  CheckCircle2,
+  XCircle,
+  Download,
+  RefreshCw,
+  Terminal,
   AlertCircle,
   Loader2,
   Server,
@@ -122,7 +122,7 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
         body: JSON.stringify({ auto_install: true }),
       });
       const data = await res.json();
-      
+
       if (data.success) {
         await checkStatus();
       } else {
@@ -143,7 +143,7 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
         method: 'POST',
       });
       const data = await res.json();
-      
+
       if (data.success) {
         setTimeout(() => checkStatus(), 2000); // Wait for service to start
       } else {
@@ -166,7 +166,7 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
         body: JSON.stringify({ model_name: modelName }),
       });
       const data = await res.json();
-      
+
       if (data.success) {
         await checkStatus();
         setCurrentStep('configure');
@@ -197,7 +197,7 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
       });
 
       if (!res.ok) throw new Error('Failed to save settings');
-      
+
       setCurrentStep('complete');
       setTimeout(() => onComplete(), 1500);
     } catch (err: any) {
@@ -224,7 +224,7 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
           </div>
         )}
-        
+
         {status && !loading && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -241,7 +241,7 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
                 </Badge>
               )}
             </div>
-            
+
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Running:</span>
               {status.running ? (
@@ -256,7 +256,7 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
                 </Badge>
               )}
             </div>
-            
+
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Models:</span>
               <Badge variant={status.models_count > 0 ? 'default' : 'secondary'}>
@@ -310,7 +310,7 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
           {status?.installed ? 'Start Ollama Service' : 'Install Ollama'}
         </CardTitle>
         <CardDescription>
-          {status?.installed 
+          {status?.installed
             ? 'Ollama is installed but not running'
             : 'Set up Ollama on your system'
           }
@@ -531,12 +531,12 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
             {(currentStep === 'configure' || currentStep === 'complete') && '4/4'}
           </span>
         </div>
-        <Progress 
+        <Progress
           value={
             currentStep === 'check' ? 25 :
             currentStep === 'install' ? 50 :
             currentStep === 'models' ? 75 : 100
-          } 
+          }
         />
       </div>
 

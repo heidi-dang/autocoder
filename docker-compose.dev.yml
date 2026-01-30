@@ -1,4 +1,4 @@
-version: "3.9"
+version: '3.9'
 
 services:
   api:
@@ -7,16 +7,16 @@ services:
       dockerfile: Dockerfile
     command: uvicorn server.main:app --host 0.0.0.0 --port 8888 --reload
     env_file:
-      - .env
+    - .env
     volumes:
-      - .:/app
-      - /var/run/docker.sock:/var/run/docker.sock  # For sandbox management
+    - .:/app
+    - /var/run/docker.sock:/var/run/docker.sock    # For sandbox management
     ports:
-      - "8888:8888"
+    - 8888:8888
     extra_hosts:
-      - "host.docker.internal:host-gateway"  # Allow container to reach host on Linux
+    - host.docker.internal:host-gateway      # Allow container to reach host on Linux
     depends_on:
-      - ui
+    - ui
 
   ui:
     working_dir: /app/ui
@@ -25,11 +25,11 @@ services:
       dockerfile: Dockerfile.dev
     command: npm run dev -- --host --port 5173
     volumes:
-      - ./ui:/app/ui
-      - /app/ui/node_modules
+    - ./ui:/app/ui
+    - /app/ui/node_modules
     env_file:
-      - .env
+    - .env
     environment:
-      - VITE_API_HOST=api
+    - VITE_API_HOST=api
     ports:
-      - "5173:5173"
+    - 5173:5173

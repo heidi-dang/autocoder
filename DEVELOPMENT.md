@@ -40,7 +40,7 @@ This roadmap breaks work into clear phases so you can pick the next most valuabl
 - **Backend tests:** Add pytest suite for key routers (`/api/setup/status`, assistant chat happy-path with mock Claude/Gemini).
 - **Frontend tests:** Add Vitest + React Testing Library smoke tests for core pages (dashboard loads, settings save).
 - **E2E:** Playwright happy-path (login optional, start agent, view logs).
-- **Coverage:** Fail CI if coverage drops below threshold (start at 60–70%). 
+- **Coverage:** Fail CI if coverage drops below threshold (start at 60–70%).
 
 ## Phase 7 — Deployment & Ops
 - **Blue/green deploy:** Add image tagging `:sha` + `:latest` (already for CI) with Traefik service labels to toggle.

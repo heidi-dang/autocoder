@@ -12,4 +12,4 @@ Pull request(s): $ARGUMENTS
 - Use 3 deepdive subagents to analyze the impact of the codebase
 - Provide a review on whether the PR is safe to merge as-is
 - Provide any feedback in terms of risk level
-- Propose any improments in terms of importance and complexity 
+- Propose any improments in terms of importance and complexity

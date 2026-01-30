@@ -56,31 +56,37 @@ PROJECT_DIR = Path(os.environ.get("PROJECT_DIR", ".")).resolve()
 # Pydantic models for input validation
 class MarkPassingInput(BaseModel):
     """Input for marking a feature as passing."""
+
     feature_id: int = Field(..., description="The ID of the feature to mark as passing", ge=1)
 
 
 class SkipFeatureInput(BaseModel):
     """Input for skipping a feature."""
+
     feature_id: int = Field(..., description="The ID of the feature to skip", ge=1)
 
 
 class MarkInProgressInput(BaseModel):
     """Input for marking a feature as in-progress."""
+
     feature_id: int = Field(..., description="The ID of the feature to mark as in-progress", ge=1)
 
 
 class ClearInProgressInput(BaseModel):
     """Input for clearing in-progress status."""
+
     feature_id: int = Field(..., description="The ID of the feature to clear in-progress status", ge=1)
 
 
 class RegressionInput(BaseModel):
     """Input for getting regression features."""
+
     limit: int = Field(default=3, ge=1, le=10, description="Maximum number of passing features to return")
 
 
 class FeatureCreateItem(BaseModel):
     """Schema for creating a single feature."""
+
     category: str = Field(..., min_length=1, max_length=100, description="Feature category")
     name: str = Field(..., min_length=1, max_length=255, description="Feature name")
     description: str = Field(..., min_length=1, description="Detailed description")
@@ -89,6 +95,7 @@ class FeatureCreateItem(BaseModel):
 
 class BulkCreateInput(BaseModel):
     """Input for bulk creating features."""
+
     features: list[FeatureCreateItem] = Field(..., min_length=1, description="List of features to create")
 
 
@@ -148,9 +155,9 @@ def feature_get_stats() -> str:
     try:
         # Single aggregate query instead of 3 separate COUNT queries
         result = session.query(
-            func.count(Feature.id).label('total'),
-            func.sum(case((Feature.passes == True, 1), else_=0)).label('passing'),
-            func.sum(case((Feature.in_progress == True, 1), else_=0)).label('in_progress')
+            func.count(Feature.id).label("total"),
+            func.sum(case((Feature.passes == True, 1), else_=0)).label("passing"),
+            func.sum(case((Feature.in_progress == True, 1), else_=0)).label("in_progress"),
         ).first()
 
         total = result.total or 0
@@ -158,20 +165,13 @@ def feature_get_stats() -> str:
         in_progress = int(result.in_progress or 0)
         percentage = round((passing / total) * 100, 1) if total > 0 else 0.0
 
-        return json.dumps({
-            "passing": passing,
-            "in_progress": in_progress,
-            "total": total,
-            "percentage": percentage
-        })
+        return json.dumps({"passing": passing, "in_progress": in_progress, "total": total, "percentage": percentage})
     finally:
         session.close()
 
 
 @mcp.tool()
-def feature_get_by_id(
-    feature_id: Annotated[int, Field(description="The ID of the feature to retrieve", ge=1)]
-) -> str:
+def feature_get_by_id(feature_id: Annotated[int, Field(description="The ID of the feature to retrieve", ge=1)]) -> str:
     """Get a specific feature by its ID.
 
     Returns the full details of a feature including its name, description,
@@ -196,9 +196,7 @@ def feature_get_by_id(
 
 
 @mcp.tool()
-def feature_get_summary(
-    feature_id: Annotated[int, Field(description="The ID of the feature", ge=1)]
-) -> str:
+def feature_get_summary(feature_id: Annotated[int, Field(description="The ID of the feature", ge=1)]) -> str:
     """Get minimal feature info: id, name, status, and dependencies only.
 
     Use this instead of feature_get_by_id when you only need status info,
@@ -215,20 +213,22 @@ def feature_get_summary(
         feature = session.query(Feature).filter(Feature.id == feature_id).first()
         if feature is None:
             return json.dumps({"error": f"Feature with ID {feature_id} not found"})
-        return json.dumps({
-            "id": feature.id,
-            "name": feature.name,
-            "passes": feature.passes,
-            "in_progress": feature.in_progress,
-            "dependencies": feature.dependencies or []
-        })
+        return json.dumps(
+            {
+                "id": feature.id,
+                "name": feature.name,
+                "passes": feature.passes,
+                "in_progress": feature.in_progress,
+                "dependencies": feature.dependencies or [],
+            }
+        )
     finally:
         session.close()
 
 
 @mcp.tool()
 def feature_mark_passing(
-    feature_id: Annotated[int, Field(description="The ID of the feature to mark as passing", ge=1)]
+    feature_id: Annotated[int, Field(description="The ID of the feature to mark as passing", ge=1)],
 ) -> str:
     """Mark a feature as passing after successful implementation.
 
@@ -262,7 +262,7 @@ def feature_mark_passing(
 
 @mcp.tool()
 def feature_mark_failing(
-    feature_id: Annotated[int, Field(description="The ID of the feature to mark as failing", ge=1)]
+    feature_id: Annotated[int, Field(description="The ID of the feature to mark as failing", ge=1)],
 ) -> str:
     """Mark a feature as failing after finding a regression.
 
@@ -294,10 +294,9 @@ def feature_mark_failing(
         session.commit()
         session.refresh(feature)
 
-        return json.dumps({
-            "message": f"Feature #{feature_id} marked as failing - regression detected",
-            "feature": feature.to_dict()
-        })
+        return json.dumps(
+            {"message": f"Feature #{feature_id} marked as failing - regression detected", "feature": feature.to_dict()}
+        )
     except Exception as e:
         session.rollback()
         return json.dumps({"error": f"Failed to mark feature failing: {str(e)}"})
@@ -306,9 +305,7 @@ def feature_mark_failing(
 
 
 @mcp.tool()
-def feature_skip(
-    feature_id: Annotated[int, Field(description="The ID of the feature to skip", ge=1)]
-) -> str:
+def feature_skip(feature_id: Annotated[int, Field(description="The ID of the feature to skip", ge=1)]) -> str:
     """Skip a feature by moving it to the end of the priority queue.
 
     Use this when a feature cannot be implemented yet due to:
@@ -350,13 +347,15 @@ def feature_skip(
 
         session.refresh(feature)
 
-        return json.dumps({
-            "id": feature.id,
-            "name": feature.name,
-            "old_priority": old_priority,
-            "new_priority": new_priority,
-            "message": f"Feature '{feature.name}' moved to end of queue"
-        })
+        return json.dumps(
+            {
+                "id": feature.id,
+                "name": feature.name,
+                "old_priority": old_priority,
+                "new_priority": new_priority,
+                "message": f"Feature '{feature.name}' moved to end of queue",
+            }
+        )
     except Exception as e:
         session.rollback()
         return json.dumps({"error": f"Failed to skip feature: {str(e)}"})
@@ -366,7 +365,7 @@ def feature_skip(
 
 @mcp.tool()
 def feature_mark_in_progress(
-    feature_id: Annotated[int, Field(description="The ID of the feature to mark as in-progress", ge=1)]
+    feature_id: Annotated[int, Field(description="The ID of the feature to mark as in-progress", ge=1)],
 ) -> str:
     """Mark a feature as in-progress.
 
@@ -405,9 +404,7 @@ def feature_mark_in_progress(
 
 
 @mcp.tool()
-def feature_claim_and_get(
-    feature_id: Annotated[int, Field(description="The ID of the feature to claim", ge=1)]
-) -> str:
+def feature_claim_and_get(feature_id: Annotated[int, Field(description="The ID of the feature to claim", ge=1)]) -> str:
     """Atomically claim a feature (mark in-progress) and return its full details.
 
     Combines feature_mark_in_progress + feature_get_by_id into a single operation.
@@ -448,7 +445,7 @@ def feature_claim_and_get(
 
 @mcp.tool()
 def feature_clear_in_progress(
-    feature_id: Annotated[int, Field(description="The ID of the feature to clear in-progress status", ge=1)]
+    feature_id: Annotated[int, Field(description="The ID of the feature to clear in-progress status", ge=1)],
 ) -> str:
     """Clear in-progress status from a feature.
 
@@ -482,7 +479,9 @@ def feature_clear_in_progress(
 
 @mcp.tool()
 def feature_create_bulk(
-    features: Annotated[list[dict], Field(description="List of features to create, each with category, name, description, and steps")]
+    features: Annotated[
+        list[dict], Field(description="List of features to create, each with category, name, description, and steps")
+    ],
 ) -> str:
     """Create multiple features in a single operation.
 
@@ -518,33 +517,33 @@ def feature_create_bulk(
             for i, feature_data in enumerate(features):
                 # Validate required fields
                 if not all(key in feature_data for key in ["category", "name", "description", "steps"]):
-                    return json.dumps({
-                        "error": f"Feature at index {i} missing required fields (category, name, description, steps)"
-                    })
+                    return json.dumps(
+                        {"error": f"Feature at index {i} missing required fields (category, name, description, steps)"}
+                    )
 
                 # Validate depends_on_indices
                 indices = feature_data.get("depends_on_indices", [])
                 if indices:
                     # Check max dependencies
                     if len(indices) > MAX_DEPENDENCIES_PER_FEATURE:
-                        return json.dumps({
-                            "error": f"Feature at index {i} has {len(indices)} dependencies, max is {MAX_DEPENDENCIES_PER_FEATURE}"
-                        })
+                        return json.dumps(
+                            {
+                                "error": f"Feature at index {i} has {len(indices)} dependencies, max is {MAX_DEPENDENCIES_PER_FEATURE}"
+                            }
+                        )
                     # Check for duplicates
                     if len(indices) != len(set(indices)):
-                        return json.dumps({
-                            "error": f"Feature at index {i} has duplicate dependencies"
-                        })
+                        return json.dumps({"error": f"Feature at index {i} has duplicate dependencies"})
                     # Check for forward references (can only depend on earlier features)
                     for idx in indices:
                         if not isinstance(idx, int) or idx < 0:
-                            return json.dumps({
-                                "error": f"Feature at index {i} has invalid dependency index: {idx}"
-                            })
+                            return json.dumps({"error": f"Feature at index {i} has invalid dependency index: {idx}"})
                         if idx >= i:
-                            return json.dumps({
-                                "error": f"Feature at index {i} cannot depend on feature at index {idx} (forward reference not allowed)"
-                            })
+                            return json.dumps(
+                                {
+                                    "error": f"Feature at index {i} cannot depend on feature at index {idx} (forward reference not allowed)"
+                                }
+                            )
 
             # Second pass: create all features
             created_features: list[Feature] = []
@@ -576,10 +575,7 @@ def feature_create_bulk(
 
             session.commit()
 
-        return json.dumps({
-            "created": len(created_features),
-            "with_dependencies": deps_count
-        })
+        return json.dumps({"created": len(created_features), "with_dependencies": deps_count})
     except Exception as e:
         session.rollback()
         return json.dumps({"error": str(e)})
@@ -589,10 +585,12 @@ def feature_create_bulk(
 
 @mcp.tool()
 def feature_create(
-    category: Annotated[str, Field(min_length=1, max_length=100, description="Feature category (e.g., 'Authentication', 'API', 'UI')")],
+    category: Annotated[
+        str, Field(min_length=1, max_length=100, description="Feature category (e.g., 'Authentication', 'API', 'UI')")
+    ],
     name: Annotated[str, Field(min_length=1, max_length=255, description="Feature name")],
     description: Annotated[str, Field(min_length=1, description="Detailed description of the feature")],
-    steps: Annotated[list[str], Field(min_length=1, description="List of implementation/verification steps")]
+    steps: Annotated[list[str], Field(min_length=1, description="List of implementation/verification steps")],
 ) -> str:
     """Create a single feature in the project backlog.
 
@@ -630,11 +628,7 @@ def feature_create(
 
         session.refresh(db_feature)
 
-        return json.dumps({
-            "success": True,
-            "message": f"Created feature: {name}",
-            "feature": db_feature.to_dict()
-        })
+        return json.dumps({"success": True, "message": f"Created feature: {name}", "feature": db_feature.to_dict()})
     except Exception as e:
         session.rollback()
         return json.dumps({"error": str(e)})
@@ -645,7 +639,7 @@ def feature_create(
 @mcp.tool()
 def feature_add_dependency(
     feature_id: Annotated[int, Field(ge=1, description="Feature to add dependency to")],
-    dependency_id: Annotated[int, Field(ge=1, description="ID of the dependency feature")]
+    dependency_id: Annotated[int, Field(ge=1, description="ID of the dependency feature")],
 ) -> str:
     """Add a dependency relationship between features.
 
@@ -695,11 +689,7 @@ def feature_add_dependency(
         feature.dependencies = sorted(current_deps)
         session.commit()
 
-        return json.dumps({
-            "success": True,
-            "feature_id": feature_id,
-            "dependencies": feature.dependencies
-        })
+        return json.dumps({"success": True, "feature_id": feature_id, "dependencies": feature.dependencies})
     except Exception as e:
         session.rollback()
         return json.dumps({"error": f"Failed to add dependency: {str(e)}"})
@@ -710,7 +700,7 @@ def feature_add_dependency(
 @mcp.tool()
 def feature_remove_dependency(
     feature_id: Annotated[int, Field(ge=1, description="Feature to remove dependency from")],
-    dependency_id: Annotated[int, Field(ge=1, description="ID of dependency to remove")]
+    dependency_id: Annotated[int, Field(ge=1, description="ID of dependency to remove")],
 ) -> str:
     """Remove a dependency from a feature.
 
@@ -735,11 +725,7 @@ def feature_remove_dependency(
         feature.dependencies = current_deps if current_deps else None
         session.commit()
 
-        return json.dumps({
-            "success": True,
-            "feature_id": feature_id,
-            "dependencies": feature.dependencies or []
-        })
+        return json.dumps({"success": True, "feature_id": feature_id, "dependencies": feature.dependencies or []})
     except Exception as e:
         session.rollback()
         return json.dumps({"error": f"Failed to remove dependency: {str(e)}"})
@@ -749,7 +735,7 @@ def feature_remove_dependency(
 
 @mcp.tool()
 def feature_get_ready(
-    limit: Annotated[int, Field(default=10, ge=1, le=50, description="Max features to return")] = 10
+    limit: Annotated[int, Field(default=10, ge=1, le=50, description="Max features to return")] = 10,
 ) -> str:
     """Get all features ready to start (dependencies satisfied, not in progress).
 
@@ -780,18 +766,14 @@ def feature_get_ready(
         scores = compute_scheduling_scores(all_dicts)
         ready.sort(key=lambda f: (-scores.get(f["id"], 0), f["priority"], f["id"]))
 
-        return json.dumps({
-            "features": ready[:limit],
-            "count": len(ready[:limit]),
-            "total_ready": len(ready)
-        })
+        return json.dumps({"features": ready[:limit], "count": len(ready[:limit]), "total_ready": len(ready)})
     finally:
         session.close()
 
 
 @mcp.tool()
 def feature_get_blocked(
-    limit: Annotated[int, Field(default=20, ge=1, le=100, description="Max features to return")] = 20
+    limit: Annotated[int, Field(default=20, ge=1, le=100, description="Max features to return")] = 20,
 ) -> str:
     """Get features that are blocked by unmet dependencies.
 
@@ -816,16 +798,9 @@ def feature_get_blocked(
             deps = f.dependencies or []
             blocking = [d for d in deps if d not in passing_ids]
             if blocking:
-                blocked.append({
-                    **f.to_dict(),
-                    "blocked_by": blocking
-                })
+                blocked.append({**f.to_dict(), "blocked_by": blocking})
 
-        return json.dumps({
-            "features": blocked[:limit],
-            "count": len(blocked[:limit]),
-            "total_blocked": len(blocked)
-        })
+        return json.dumps({"features": blocked[:limit], "count": len(blocked[:limit]), "total_blocked": len(blocked)})
     finally:
         session.close()
 
@@ -861,22 +836,21 @@ def feature_get_graph() -> str:
             else:
                 status = "pending"
 
-            nodes.append({
-                "id": f.id,
-                "name": f.name,
-                "category": f.category,
-                "status": status,
-                "priority": f.priority,
-                "dependencies": deps
-            })
+            nodes.append(
+                {
+                    "id": f.id,
+                    "name": f.name,
+                    "category": f.category,
+                    "status": status,
+                    "priority": f.priority,
+                    "dependencies": deps,
+                }
+            )
 
             for dep_id in deps:
                 edges.append({"source": dep_id, "target": f.id})
 
-        return json.dumps({
-            "nodes": nodes,
-            "edges": edges
-        })
+        return json.dumps({"nodes": nodes, "edges": edges})
     finally:
         session.close()
 
@@ -884,7 +858,7 @@ def feature_get_graph() -> str:
 @mcp.tool()
 def feature_set_dependencies(
     feature_id: Annotated[int, Field(ge=1, description="Feature to set dependencies for")],
-    dependency_ids: Annotated[list[int], Field(description="List of dependency feature IDs")]
+    dependency_ids: Annotated[list[int], Field(description="List of dependency feature IDs")],
 ) -> str:
     """Set all dependencies for a feature at once, replacing any existing dependencies.
 
@@ -940,11 +914,7 @@ def feature_set_dependencies(
         feature.dependencies = sorted(dependency_ids) if dependency_ids else None
         session.commit()
 
-        return json.dumps({
-            "success": True,
-            "feature_id": feature_id,
-            "dependencies": feature.dependencies or []
-        })
+        return json.dumps({"success": True, "feature_id": feature_id, "dependencies": feature.dependencies or []})
     except Exception as e:
         session.rollback()
         return json.dumps({"error": f"Failed to set dependencies: {str(e)}"})

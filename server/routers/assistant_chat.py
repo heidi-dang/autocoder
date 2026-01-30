@@ -7,15 +7,14 @@ WebSocket and REST endpoints for the read-only project assistant.
 
 import json
 import logging
-import os
 import re
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from .. import gemini_client, ollama_client
 from ..services.assistant_chat_session import (
     AssistantChatSession,
     create_session,
@@ -29,8 +28,6 @@ from ..services.assistant_database import (
     get_conversation,
     get_conversations,
 )
-from .. import gemini_client
-from .. import ollama_client
 
 logger = logging.getLogger(__name__)
 
@@ -40,64 +37,72 @@ router = APIRouter(prefix="/api/assistant", tags=["assistant-chat"])
 ROOT_DIR = Path(__file__).parent.parent.parent
 
 
-def _get_project_path(project_name: str) -> Optional[Path]:
+def _get_project_path(project_name: str) -> Path | None:
     """Get project path from registry."""
     import sys
+
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
     from registry import get_project_path
+
     return get_project_path(project_name)
 
 
 def validate_project_name(name: str) -> bool:
     """Validate project name to prevent path traversal."""
-    return bool(re.match(r'^[a-zA-Z0-9_-]{1,50}$', name))
+    return bool(re.match(r"^[a-zA-Z0-9_-]{1,50}$", name))
 
 
 # ============================================================================
 # Pydantic Models
 # ============================================================================
 
+
 class ConversationSummary(BaseModel):
     """Summary of a conversation."""
+
     id: int
     project_name: str
-    title: Optional[str]
-    created_at: Optional[str]
-    updated_at: Optional[str]
+    title: str | None
+    created_at: str | None
+    updated_at: str | None
     message_count: int
 
 
 class ConversationMessageModel(BaseModel):
     """A message within a conversation."""
+
     id: int
     role: str
     content: str
-    timestamp: Optional[str]
+    timestamp: str | None
 
 
 class ConversationDetail(BaseModel):
     """Full conversation with messages."""
+
     id: int
     project_name: str
-    title: Optional[str]
-    created_at: Optional[str]
-    updated_at: Optional[str]
+    title: str | None
+    created_at: str | None
+    updated_at: str | None
     messages: list[ConversationMessageModel]
 
 
 class SessionInfo(BaseModel):
     """Active session information."""
+
     project_name: str
-    conversation_id: Optional[int]
+    conversation_id: int | None
     is_active: bool
 
 
 # ============================================================================
 # REST Endpoints - Conversation Management
 # ============================================================================
+
 
 @router.get("/conversations/{project_name}", response_model=list[ConversationSummary])
 async def list_project_conversations(project_name: str):
@@ -179,6 +184,7 @@ async def delete_project_conversation(project_name: str, conversation_id: int):
 # REST Endpoints - Session Management
 # ============================================================================
 
+
 @router.get("/sessions", response_model=list[str])
 async def list_active_sessions():
     """List all active assistant sessions."""
@@ -220,6 +226,7 @@ async def close_session(project_name: str):
 # WebSocket Endpoint
 # ============================================================================
 
+
 @router.websocket("/ws/{project_name}")
 async def assistant_chat_websocket(websocket: WebSocket, project_name: str):
     """
@@ -256,7 +263,7 @@ async def assistant_chat_websocket(websocket: WebSocket, project_name: str):
     await websocket.accept()
     logger.info(f"Assistant WebSocket connected for project: {project_name}")
 
-    session: Optional[AssistantChatSession] = None
+    session: AssistantChatSession | None = None
 
     try:
         while True:
@@ -293,27 +300,20 @@ async def assistant_chat_websocket(websocket: WebSocket, project_name: str):
                         logger.debug("Session start complete")
                     except Exception as e:
                         logger.exception(f"Error starting assistant session for {project_name}")
-                        await websocket.send_json({
-                            "type": "error",
-                            "content": f"Failed to start session: {str(e)}"
-                        })
+                        await websocket.send_json({"type": "error", "content": f"Failed to start session: {str(e)}"})
 
                 elif msg_type == "message":
                     if not session:
                         session = get_session(project_name)
                         if not session:
-                            await websocket.send_json({
-                                "type": "error",
-                                "content": "No active session. Send 'start' first."
-                            })
+                            await websocket.send_json(
+                                {"type": "error", "content": "No active session. Send 'start' first."}
+                            )
                             continue
 
                     user_content = message.get("content", "").strip()
                     if not user_content:
-                        await websocket.send_json({
-                            "type": "error",
-                            "content": "Empty message"
-                        })
+                        await websocket.send_json({"type": "error", "content": "Empty message"})
                         continue
 
                     # Stream Claude's response
@@ -321,16 +321,10 @@ async def assistant_chat_websocket(websocket: WebSocket, project_name: str):
                         await websocket.send_json(chunk)
 
                 else:
-                    await websocket.send_json({
-                        "type": "error",
-                        "content": f"Unknown message type: {msg_type}"
-                    })
+                    await websocket.send_json({"type": "error", "content": f"Unknown message type: {msg_type}"})
 
             except json.JSONDecodeError:
-                await websocket.send_json({
-                    "type": "error",
-                    "content": "Invalid JSON"
-                })
+                await websocket.send_json({"type": "error", "content": "Invalid JSON"})
 
     except WebSocketDisconnect:
         logger.info(f"Assistant chat WebSocket disconnected for {project_name}")
@@ -338,10 +332,7 @@ async def assistant_chat_websocket(websocket: WebSocket, project_name: str):
     except Exception as e:
         logger.exception(f"Assistant chat WebSocket error for {project_name}")
         try:
-            await websocket.send_json({
-                "type": "error",
-                "content": f"Server error: {str(e)}"
-            })
+            await websocket.send_json({"type": "error", "content": f"Server error: {str(e)}"})
         except Exception:
             pass
 
@@ -350,12 +341,14 @@ async def assistant_chat_websocket(websocket: WebSocket, project_name: str):
 # Quick Chat Endpoint (No Project Context)
 # ============================================================================
 
+
 class QuickChatRequest(BaseModel):
     """Request for quick chat."""
+
     message: str
-    mode: Optional[str] = "assistant"  # assistant, agent, or spec
-    model: Optional[str] = None  # Override default model if provided
-    command: Optional[str] = None  # /task, /debug, /analyze, etc.
+    mode: str | None = "assistant"  # assistant, agent, or spec
+    model: str | None = None  # Override default model if provided
+    command: str | None = None  # /task, /debug, /analyze, etc.
 
 
 @router.post("/quick-chat")
@@ -363,22 +356,23 @@ async def quick_chat(request: QuickChatRequest):
     """
     Stream a quick chat response without project context.
     Uses configured AI provider (cloud or local Ollama).
-    
+
     Supports:
     - mode: "assistant" (default), "agent" (autonomous), or "spec" (specification generation)
     - model: override the default model selection
     - command: /task, /debug, /analyze, etc. for command-based task creation
     """
     import sys
+
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
-    
+
     from registry import get_all_settings
-    
+
     settings = get_all_settings()
     ai_provider = settings.get("ai_provider", "cloud")
-    
+
     # Build the message with mode/command context
     enhanced_message = request.message
     if request.command:
@@ -392,13 +386,13 @@ async def quick_chat(request: QuickChatRequest):
         }
         prefix = mode_context.get(request.command, f"Execute {request.command} command on: ")
         enhanced_message = f"{prefix}{request.message}"
-    
+
     # Add mode-specific instructions
     if request.mode == "agent":
         enhanced_message += "\n[Mode: AGENT] Please execute this autonomously and provide step-by-step execution plan."
     elif request.mode == "spec":
         enhanced_message += "\n[Mode: SPEC] Please generate a detailed specification document for this."
-    
+
     async def generate():
         try:
             if ai_provider == "local":
@@ -412,19 +406,17 @@ async def quick_chat(request: QuickChatRequest):
             else:
                 # Use Gemini or Claude (cloud)
                 model_to_use = request.model or settings.get("model", "gemini-1.5-flash")
-                
+
                 # Check if Gemini API key is configured for Gemini models
                 if "gemini" in model_to_use:
                     gemini_key = settings.get("gemini_api_key")
                     if gemini_key:
                         # Set environment variable for this request
                         import os
+
                         os.environ["GEMINI_API_KEY"] = gemini_key
-                    
-                    async for chunk in gemini_client.stream_chat(
-                        enhanced_message,
-                        model=model_to_use
-                    ):
+
+                    async for chunk in gemini_client.stream_chat(enhanced_message, model=model_to_use):
                         yield chunk
                 else:
                     # For Claude models, use existing implementation
@@ -433,5 +425,5 @@ async def quick_chat(request: QuickChatRequest):
         except Exception as e:
             logger.exception("Quick chat error")
             yield f"\n\n[Error: {str(e)}]"
-    
+
     return StreamingResponse(generate(), media_type="text/plain")

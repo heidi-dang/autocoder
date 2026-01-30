@@ -50,11 +50,8 @@ router = APIRouter(prefix="/api/projects/{project_name}/devserver", tags=["devse
 
 def validate_project_name(name: str) -> str:
     """Validate and sanitize project name to prevent path traversal."""
-    if not re.match(r'^[a-zA-Z0-9_-]{1,50}$', name):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid project name"
-        )
+    if not re.match(r"^[a-zA-Z0-9_-]{1,50}$", name):
+        raise HTTPException(status_code=400, detail="Invalid project name")
     return name
 
 
@@ -75,16 +72,10 @@ def get_project_dir(project_name: str) -> Path:
     project_dir = _get_project_path(project_name)
 
     if not project_dir:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Project '{project_name}' not found in registry"
-        )
+        raise HTTPException(status_code=404, detail=f"Project '{project_name}' not found in registry")
 
     if not project_dir.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"Project directory not found: {project_dir}"
-        )
+        raise HTTPException(status_code=404, detail=f"Project directory not found: {project_dir}")
 
     return project_dir
 
@@ -164,7 +155,7 @@ async def start_devserver(
     if not command:
         raise HTTPException(
             status_code=400,
-            detail="No dev command available. Configure a custom command or ensure project type can be detected."
+            detail="No dev command available. Configure a custom command or ensure project type can be detected.",
         )
 
     # Now command is definitely str
@@ -264,10 +255,7 @@ async def update_devserver_config(
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
         except OSError as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to save configuration: {e}"
-            )
+            raise HTTPException(status_code=500, detail=f"Failed to save configuration: {e}")
 
     # Return updated config
     config = get_project_config(project_dir)

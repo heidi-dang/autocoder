@@ -81,30 +81,16 @@ def get_existing_projects() -> list[tuple[str, Path]]:
 
 def display_menu(projects: list[tuple[str, Path]]) -> None:
     """Display the main menu."""
-    print("\n" + "=" * 50)
-    print("  Autonomous Coding Agent Launcher")
-    print("=" * 50)
-    print("\n[1] Create new project")
 
     if projects:
-        print("[2] Continue existing project")
-
-    print("[q] Quit")
-    print()
+        pass
 
 
 def display_projects(projects: list[tuple[str, Path]]) -> None:
     """Display list of existing projects."""
-    print("\n" + "-" * 40)
-    print("  Existing Projects")
-    print("-" * 40)
 
     for i, (name, path) in enumerate(projects, 1):
-        print(f"  [{i}] {name}")
-        print(f"      {path}")
-
-    print("\n  [b] Back to main menu")
-    print()
+        pass
 
 
 def get_project_choice(projects: list[tuple[str, Path]]) -> tuple[str, Path] | None:
@@ -116,16 +102,15 @@ def get_project_choice(projects: list[tuple[str, Path]]) -> tuple[str, Path] | N
     while True:
         choice = input("Select project number: ").strip().lower()
 
-        if choice == 'b':
+        if choice == "b":
             return None
 
         try:
             idx = int(choice) - 1
             if 0 <= idx < len(projects):
                 return projects[idx]
-            print(f"Please enter a number between 1 and {len(projects)}")
         except ValueError:
-            print("Invalid input. Enter a number or 'b' to go back.")
+            pass
 
 
 def get_new_project_info() -> tuple[str, Path] | None:
@@ -134,11 +119,6 @@ def get_new_project_info() -> tuple[str, Path] | None:
     Returns:
         Tuple of (name, path) for the new project, or None if cancelled.
     """
-    print("\n" + "-" * 40)
-    print("  Create New Project")
-    print("-" * 40)
-    print("\nEnter project name (e.g., my-awesome-app)")
-    print("Leave empty to cancel.\n")
 
     name = input("Project name: ").strip()
 
@@ -151,23 +131,18 @@ def get_new_project_info() -> tuple[str, Path] | None:
         invalid_chars = '<>:"/\\|?*'
     else:
         # Unix only restricts / and null
-        invalid_chars = '/'
+        invalid_chars = "/"
 
     for char in invalid_chars:
         if char in name:
-            print(f"Invalid character '{char}' in project name")
             return None
 
     # Check if name already registered
     existing = get_project_path(name)
     if existing:
-        print(f"Project '{name}' already exists at {existing}")
         return None
 
     # Get project path
-    print("\nEnter the full path for the project directory")
-    print("(e.g., C:/Projects/my-app or /home/user/projects/my-app)")
-    print("Leave empty to cancel.\n")
 
     path_str = input("Project path: ").strip()
     if not path_str:
@@ -195,8 +170,6 @@ def ensure_project_scaffolded(project_name: str, project_dir: Path) -> Path:
     project_dir.mkdir(parents=True, exist_ok=True)
 
     # Scaffold prompts (copies templates if they don't exist)
-    print(f"\nSetting up project: {project_name}")
-    print(f"Location: {project_dir}")
     scaffold_project_prompts(project_dir)
 
     # Register in registry
@@ -212,15 +185,6 @@ def run_spec_creation(project_dir: Path) -> bool:
     The project path is passed as an argument so create-spec knows where to write files.
     Captures stderr to detect authentication errors and provide helpful guidance.
     """
-    print("\n" + "=" * 50)
-    print("  Project Specification Setup")
-    print("=" * 50)
-    print(f"\nProject directory: {project_dir}")
-    print(f"Prompts will be saved to: {get_project_prompts_dir(project_dir)}")
-    print("\nLaunching Claude Code for interactive spec creation...")
-    print("Answer the questions to define your project.")
-    print("When done, Claude will generate the spec files.")
-    print("Exit Claude Code (Ctrl+C or /exit) when finished.\n")
 
     try:
         # Launch CLI with /create-spec command
@@ -231,7 +195,7 @@ def run_spec_creation(project_dir: Path) -> bool:
             check=False,  # Don't raise on non-zero exit
             cwd=str(Path(__file__).parent),  # Run from project root
             stderr=subprocess.PIPE,
-            text=True
+            text=True,
         )
 
         # Check for authentication errors in stderr
@@ -242,29 +206,20 @@ def run_spec_creation(project_dir: Path) -> bool:
 
         # If there was stderr output but not an auth error, show it
         if stderr_output.strip() and result.returncode != 0:
-            print(f"\nClaude CLI error: {stderr_output.strip()}")
+            pass
 
         # Check if spec was created in project prompts directory
         if check_spec_exists(project_dir):
-            print("\n" + "-" * 50)
-            print("Spec files created successfully!")
             return True
         else:
-            print("\n" + "-" * 50)
-            print("Spec creation incomplete.")
-            print(f"Please ensure app_spec.txt exists in: {get_project_prompts_dir(project_dir)}")
             # If failed with non-zero exit and no spec, might be auth issue
             if result.returncode != 0:
-                print("\nIf you're having authentication issues, try running: claude login")
+                pass
             return False
 
     except FileNotFoundError:
-        print("\nError: 'claude' command not found.")
-        print("Make sure Claude Code CLI is installed:")
-        print("  npm install -g @anthropic-ai/claude-code")
         return False
     except KeyboardInterrupt:
-        print("\n\nSpec creation cancelled.")
         return False
 
 
@@ -274,57 +229,28 @@ def run_manual_spec_flow(project_dir: Path) -> bool:
 
     Shows the paths to edit and waits for user to press Enter when ready.
     """
-    prompts_dir = get_project_prompts_dir(project_dir)
-
-    print("\n" + "-" * 50)
-    print("  Manual Specification Setup")
-    print("-" * 50)
-    print("\nTemplate files have been created. Edit these files in your editor:")
-    print("\n  Required:")
-    print(f"    {prompts_dir / 'app_spec.txt'}")
-    print("\n  Optional (customize agent behavior):")
-    print(f"    {prompts_dir / 'initializer_prompt.md'}")
-    print(f"    {prompts_dir / 'coding_prompt.md'}")
-    print("\n" + "-" * 50)
-    print("\nThe app_spec.txt file contains a template with placeholders.")
-    print("Replace the placeholders with your actual project specification.")
-    print("\nWhen you're done editing, press Enter to continue...")
+    get_project_prompts_dir(project_dir)
 
     try:
         input()
     except KeyboardInterrupt:
-        print("\n\nCancelled.")
         return False
 
     # Validate that spec was edited
     if check_spec_exists(project_dir):
-        print("\nSpec file validated successfully!")
         return True
     else:
-        print("\nWarning: The app_spec.txt file still contains the template placeholder.")
-        print("The agent may not work correctly without a proper specification.")
         confirm = input("Continue anyway? [y/N]: ").strip().lower()
-        return confirm == 'y'
+        return confirm == "y"
 
 
 def ask_spec_creation_choice() -> str | None:
     """Ask user whether to create spec with Claude or manually."""
-    print("\n" + "-" * 40)
-    print("  Specification Setup")
-    print("-" * 40)
-    print("\nHow would you like to define your project?")
-    print("\n[1] Create spec with Claude (recommended)")
-    print("    Interactive conversation to define your project")
-    print("\n[2] Edit templates manually")
-    print("    Edit the template files directly in your editor")
-    print("\n[b] Back to main menu")
-    print()
 
     while True:
         choice = input("Select [1/2/b]: ").strip().lower()
-        if choice in ['1', '2', 'b']:
+        if choice in ["1", "2", "b"]:
             return choice
-        print("Invalid choice. Please enter 1, 2, or b.")
 
 
 def create_new_project_flow() -> tuple[str, Path] | None:
@@ -350,17 +276,16 @@ def create_new_project_flow() -> tuple[str, Path] | None:
     # Ask user how they want to handle spec creation
     choice = ask_spec_creation_choice()
 
-    if choice == 'b':
+    if choice == "b":
         return None
-    elif choice == '1':
+    elif choice == "1":
         # Create spec with Claude
         success = run_spec_creation(project_dir)
         if not success:
-            print("\nYou can try again later or edit the templates manually.")
             retry = input("Start agent anyway? [y/N]: ").strip().lower()
-            if retry != 'y':
+            if retry != "y":
                 return None
-    elif choice == '2':
+    elif choice == "2":
         # Manual mode - guide user through editing
         success = run_manual_spec_flow(project_dir)
         if not success:
@@ -380,15 +305,9 @@ def run_agent(project_name: str, project_dir: Path) -> None:
     """
     # Final validation before running
     if not has_project_prompts(project_dir):
-        print(f"\nWarning: No valid spec found for project '{project_name}'")
-        print("The agent may not work correctly.")
         confirm = input("Continue anyway? [y/N]: ").strip().lower()
-        if confirm != 'y':
+        if confirm != "y":
             return
-
-    print(f"\nStarting agent for project: {project_name}")
-    print(f"Location: {project_dir}")
-    print("-" * 50)
 
     # Build the command - pass absolute path
     cmd = [sys.executable, "autonomous_agent_demo.py", "--project-dir", str(project_dir.resolve())]
@@ -396,12 +315,7 @@ def run_agent(project_name: str, project_dir: Path) -> None:
     # Run the agent with stderr capture to detect auth errors
     # stdout goes directly to terminal for real-time output
     try:
-        result = subprocess.run(
-            cmd,
-            check=False,
-            stderr=subprocess.PIPE,
-            text=True
-        )
+        result = subprocess.run(cmd, check=False, stderr=subprocess.PIPE, text=True)
 
         # Check for authentication errors
         stderr_output = result.stderr or ""
@@ -410,13 +324,12 @@ def run_agent(project_name: str, project_dir: Path) -> None:
                 print_auth_error_help()
             elif stderr_output.strip():
                 # Show any other errors
-                print(f"\nAgent error:\n{stderr_output.strip()}")
                 # Still hint about auth if exit was unexpected
                 if "error" in stderr_output.lower() or "exception" in stderr_output.lower():
-                    print("\nIf this is an authentication issue, try running: claude login")
+                    pass
 
     except KeyboardInterrupt:
-        print("\n\nAgent interrupted. Run again to resume.")
+        pass
 
 
 def main() -> None:
@@ -431,17 +344,16 @@ def main() -> None:
 
         choice = input("Select option: ").strip().lower()
 
-        if choice == 'q':
-            print("\nGoodbye!")
+        if choice == "q":
             break
 
-        elif choice == '1':
+        elif choice == "1":
             result = create_new_project_flow()
             if result:
                 project_name, project_dir = result
                 run_agent(project_name, project_dir)
 
-        elif choice == '2' and projects:
+        elif choice == "2" and projects:
             display_projects(projects)
             selected = get_project_choice(projects)
             if selected:
@@ -449,7 +361,7 @@ def main() -> None:
                 run_agent(project_name, project_dir)
 
         else:
-            print("Invalid option. Please try again.")
+            pass
 
 
 if __name__ == "__main__":

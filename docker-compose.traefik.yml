@@ -2,38 +2,38 @@ services:
   traefik:
     image: traefik:latest
     command:
-      - --providers.docker=true
-      - --providers.docker.endpoint=unix:///var/run/docker.sock
-      - --providers.docker.exposedbydefault=false
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
-      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    - --providers.docker=true
+    - --providers.docker.endpoint=unix:///var/run/docker.sock
+    - --providers.docker.exposedbydefault=false
+    - --entrypoints.web.address=:80
+    - --entrypoints.websecure.address=:443
+    - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+    - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+    - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
+    - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
     ports:
-      - "80:80"
-      - "443:443"
+    - 80:80
+    - 443:443
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./letsencrypt:/letsencrypt
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ./letsencrypt:/letsencrypt
     networks:
-      - traefik-proxy
+    - traefik-proxy
 
   autocoder:
     networks:
-      - traefik-proxy
+    - traefik-proxy
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.autocoder.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.autocoder.entrypoints=web"
-      - "traefik.http.routers.autocoder.middlewares=redirect-to-https"
-      - "traefik.http.routers.autocoder-secure.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.autocoder-secure.entrypoints=websecure"
-      - "traefik.http.routers.autocoder-secure.tls=true"
-      - "traefik.http.routers.autocoder-secure.tls.certresolver=letsencrypt"
-      - "traefik.http.services.autocoder.loadbalancer.server.port=${APP_PORT:-8888}"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    - traefik.enable=true
+    - traefik.http.routers.autocoder.rule=Host(`${DOMAIN}`)
+    - traefik.http.routers.autocoder.entrypoints=web
+    - traefik.http.routers.autocoder.middlewares=redirect-to-https
+    - traefik.http.routers.autocoder-secure.rule=Host(`${DOMAIN}`)
+    - traefik.http.routers.autocoder-secure.entrypoints=websecure
+    - traefik.http.routers.autocoder-secure.tls=true
+    - traefik.http.routers.autocoder-secure.tls.certresolver=letsencrypt
+    - traefik.http.services.autocoder.loadbalancer.server.port=${APP_PORT:-8888}
+    - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
 
 networks:
   traefik-proxy:

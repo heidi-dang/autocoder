@@ -44,6 +44,7 @@ def _init_imports():
         return
 
     import sys
+
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
@@ -62,6 +63,7 @@ def _init_imports():
 def _get_registry_functions():
     """Get registry functions with lazy import."""
     import sys
+
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
@@ -73,6 +75,7 @@ def _get_registry_functions():
         unregister_project,
         validate_project_path,
     )
+
     return register_project, unregister_project, get_project_path, list_registered_projects, validate_project_path
 
 
@@ -81,10 +84,10 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 def validate_project_name(name: str) -> str:
     """Validate and sanitize project name to prevent path traversal."""
-    if not re.match(r'^[a-zA-Z0-9_-]{1,50}$', name):
+    if not re.match(r"^[a-zA-Z0-9_-]{1,50}$", name):
         raise HTTPException(
             status_code=400,
-            detail="Invalid project name. Use only letters, numbers, hyphens, and underscores (1-50 chars)."
+            detail="Invalid project name. Use only letters, numbers, hyphens, and underscores (1-50 chars).",
         )
     return name
 
@@ -118,12 +121,7 @@ def get_project_stats(project_dir: Path) -> ProjectStats:
     _init_imports()
     passing, in_progress, total = _count_passing_tests(project_dir)
     percentage = (passing / total * 100) if total > 0 else 0.0
-    return ProjectStats(
-        passing=passing,
-        in_progress=in_progress,
-        total=total,
-        percentage=round(percentage, 1)
-    )
+    return ProjectStats(passing=passing, in_progress=in_progress, total=total, percentage=round(percentage, 1))
 
 
 @router.get("", response_model=list[ProjectSummary])
@@ -146,12 +144,14 @@ async def list_projects():
         has_spec = _check_spec_exists(project_dir)
         stats = get_project_stats(project_dir)
 
-        result.append(ProjectSummary(
-            name=name,
-            path=info["path"],
-            has_spec=has_spec,
-            stats=stats,
-        ))
+        result.append(
+            ProjectSummary(
+                name=name,
+                path=info["path"],
+                has_spec=has_spec,
+                stats=stats,
+            )
+        )
 
     return result
 
@@ -168,10 +168,7 @@ async def create_project(project: ProjectCreate):
     # Check if project name already registered
     existing = get_project_path(name)
     if existing:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Project '{name}' already exists at {existing}"
-        )
+        raise HTTPException(status_code=409, detail=f"Project '{name}' already exists at {existing}")
 
     # Check if path already registered under a different name
     all_projects = list_registered_projects()
@@ -185,34 +182,25 @@ async def create_project(project: ProjectCreate):
 
         if paths_match:
             raise HTTPException(
-                status_code=409,
-                detail=f"Path '{project_path}' is already registered as project '{existing_name}'"
+                status_code=409, detail=f"Path '{project_path}' is already registered as project '{existing_name}'"
             )
 
     # Security: Check if path is in a blocked location
     from .filesystem import is_path_blocked
+
     if is_path_blocked(project_path):
-        raise HTTPException(
-            status_code=403,
-            detail="Cannot create project in system or sensitive directory"
-        )
+        raise HTTPException(status_code=403, detail="Cannot create project in system or sensitive directory")
 
     # Validate the path is usable
     if project_path.exists():
         if not project_path.is_dir():
-            raise HTTPException(
-                status_code=400,
-                detail="Path exists but is not a directory"
-            )
+            raise HTTPException(status_code=400, detail="Path exists but is not a directory")
     else:
         # Create the directory
         try:
             project_path.mkdir(parents=True, exist_ok=True)
         except OSError as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to create directory: {e}"
-            )
+            raise HTTPException(status_code=500, detail=f"Failed to create directory: {e}")
 
     # Scaffold prompts
     _scaffold_project_prompts(project_path)
@@ -221,10 +209,7 @@ async def create_project(project: ProjectCreate):
     try:
         register_project(name, project_path)
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to register project: {e}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to register project: {e}")
 
     return ProjectSummary(
         name=name,
@@ -284,8 +269,7 @@ async def delete_project(name: str, delete_files: bool = False):
     lock_file = project_dir / ".agent.lock"
     if lock_file.exists():
         raise HTTPException(
-            status_code=409,
-            detail="Cannot delete project while agent is running. Stop the agent first."
+            status_code=409, detail="Cannot delete project while agent is running. Stop the agent first."
         )
 
     # Optionally delete files
@@ -300,7 +284,7 @@ async def delete_project(name: str, delete_files: bool = False):
 
     return {
         "success": True,
-        "message": f"Project '{name}' deleted" + (" (files removed)" if delete_files else " (files preserved)")
+        "message": f"Project '{name}' deleted" + (" (files removed)" if delete_files else " (files preserved)"),
     }
 
 
@@ -408,7 +392,9 @@ async def clone_repository(name: str, request: ProjectCloneRequest):
     if not repo_url:
         raise HTTPException(status_code=400, detail="Repository URL is required")
 
-    target_dirname = _validate_target_dirname(request.target_dir) if request.target_dir else _derive_repo_dirname(repo_url)
+    target_dirname = (
+        _validate_target_dirname(request.target_dir) if request.target_dir else _derive_repo_dirname(repo_url)
+    )
     clone_target = (project_dir / target_dirname).resolve()
 
     # Safety: ensure the resolved target stays within the project directory

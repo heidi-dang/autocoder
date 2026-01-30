@@ -16,7 +16,6 @@ import uuid
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Optional
 
 # Fix for Windows subprocess support in asyncio
 if sys.platform == "win32":
@@ -27,8 +26,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env file if present
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, Request, Response, WebSocket
 import base64
+
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -79,7 +79,7 @@ UI_DIST_DIR = ROOT_DIR / "ui" / "dist"
 # -----------------------------------------------------------------------------
 
 # contextvar for request ID
-request_id_ctx: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
+request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
 class RequestIdFilter(logging.Filter):
@@ -91,9 +91,7 @@ class RequestIdFilter(logging.Filter):
 def configure_logging():
     """Configure JSON logging with request_id."""
     handler = logging.StreamHandler()
-    formatter = jsonlogger.JsonFormatter(
-        "%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s"
-    )
+    formatter = jsonlogger.JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s")
     handler.setFormatter(formatter)
     handler.addFilter(RequestIdFilter())
 
@@ -109,6 +107,7 @@ def configure_logging():
 
 
 configure_logging()
+
 
 def configure_sentry():
     dsn = os.getenv("SENTRY_DSN")
@@ -137,6 +136,7 @@ def configure_tracing(app: FastAPI):
     provider.add_span_processor(processor)
     trace.set_tracer_provider(provider)
     FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
+
 
 # -----------------------------------------------------------------------------
 # Metrics
@@ -233,9 +233,9 @@ else:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
-            "http://localhost:5173",      # Vite dev server
+            "http://localhost:5173",  # Vite dev server
             "http://127.0.0.1:5173",
-            "http://localhost:8888",      # Production
+            "http://localhost:8888",  # Production
             "http://127.0.0.1:8888",
         ],
         allow_credentials=True,
@@ -247,6 +247,7 @@ else:
 # ============================================================================
 # Health Endpoint
 # ============================================================================
+
 
 @app.get("/health")
 async def health():
@@ -269,6 +270,7 @@ async def readiness():
 # ============================================================================
 
 if not ALLOW_REMOTE:
+
     @app.middleware("http")
     async def require_localhost(request: Request, call_next):
         """Only allow requests from localhost (disabled when AUTOCODER_ALLOW_REMOTE=1)."""
@@ -285,6 +287,7 @@ if not ALLOW_REMOTE:
 # Optional Authentication Middleware
 # ============================================================================
 if AUTH_ENABLED:
+
     @app.middleware("http")
     async def auth_middleware(request: Request, call_next):
         """Require HTTP Basic or token auth for non-public endpoints when enabled.
@@ -305,17 +308,17 @@ if AUTH_ENABLED:
 
         if AUTH_TYPE == "basic":
             if not auth_header.startswith("Basic "):
-                return Response(status_code=401, headers={"WWW-Authenticate": "Basic realm=\"Autocoder\""})
+                return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="Autocoder"'})
             try:
                 b64 = auth_header.split(" ", 1)[1]
                 decoded = base64.b64decode(b64).decode("utf-8", errors="ignore")
                 user, pwd = decoded.split(":", 1)
             except Exception:
-                return Response(status_code=401, headers={"WWW-Authenticate": "Basic realm=\"Autocoder\""})
+                return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="Autocoder"'})
 
             # Accept either the regular user credentials or the root credentials
-            valid_regular = (user == AUTH_USER and pwd == AUTH_PASS and AUTH_USER and AUTH_PASS)
-            valid_root = (user == AUTH_ROOT_USER and pwd == AUTH_ROOT_PASS and AUTH_ROOT_USER and AUTH_ROOT_PASS)
+            valid_regular = user == AUTH_USER and pwd == AUTH_PASS and AUTH_USER and AUTH_PASS
+            valid_root = user == AUTH_ROOT_USER and pwd == AUTH_ROOT_PASS and AUTH_ROOT_USER and AUTH_ROOT_PASS
             if not (valid_regular or valid_root):
                 return Response(status_code=403)
 
@@ -345,6 +348,7 @@ if AUTH_ENABLED:
         # Unknown auth type - allow by default
         return await call_next(request)
 
+
 @app.middleware("http")
 async def request_id_middleware(request: Request, call_next):
     """Attach a request_id to context and response headers for traceability."""
@@ -360,6 +364,7 @@ async def request_id_middleware(request: Request, call_next):
 
 
 if METRICS_ENABLED:
+
     @app.get("/metrics")
     async def metrics():
         """Prometheus metrics endpoint."""
@@ -403,6 +408,7 @@ app.include_router(ollama_manager_router)
 # WebSocket Endpoint
 # ============================================================================
 
+
 @app.websocket("/ws/projects/{project_name}")
 async def websocket_endpoint(websocket: WebSocket, project_name: str):
     """WebSocket endpoint for real-time project updates."""
@@ -412,6 +418,7 @@ async def websocket_endpoint(websocket: WebSocket, project_name: str):
 # ============================================================================
 # Setup & Health Endpoints
 # ============================================================================
+
 
 @app.get("/api/health")
 async def health_check():
@@ -490,6 +497,7 @@ if UI_DIST_DIR.exists():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "server.main:app",
         host="127.0.0.1",  # Localhost only for security

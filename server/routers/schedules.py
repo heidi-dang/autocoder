@@ -8,10 +8,10 @@ Provides CRUD operations for time-based schedule configuration.
 
 import re
 import sys
+from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Generator, Tuple
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.orm import Session
@@ -35,27 +35,22 @@ def _get_project_path(project_name: str) -> Path:
         sys.path.insert(0, str(root))
 
     from registry import get_project_path
+
     return get_project_path(project_name)
 
 
-router = APIRouter(
-    prefix="/api/projects/{project_name}/schedules",
-    tags=["schedules"]
-)
+router = APIRouter(prefix="/api/projects/{project_name}/schedules", tags=["schedules"])
 
 
 def validate_project_name(name: str) -> str:
     """Validate and sanitize project name to prevent path traversal."""
-    if not re.match(r'^[a-zA-Z0-9_-]{1,50}$', name):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid project name"
-        )
+    if not re.match(r"^[a-zA-Z0-9_-]{1,50}$", name):
+        raise HTTPException(status_code=400, detail="Invalid project name")
     return name
 
 
 @contextmanager
-def _get_db_session(project_name: str) -> Generator[Tuple[Session, Path], None, None]:
+def _get_db_session(project_name: str) -> Generator[tuple[Session, Path], None, None]:
     """Get database session for a project as a context manager.
 
     Usage:
@@ -69,16 +64,10 @@ def _get_db_session(project_name: str) -> Generator[Tuple[Session, Path], None, 
     project_path = _get_project_path(project_name)
 
     if not project_path:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Project '{project_name}' not found in registry"
-        )
+        raise HTTPException(status_code=404, detail=f"Project '{project_name}' not found in registry")
 
     if not project_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"Project directory not found: {project_path}"
-        )
+        raise HTTPException(status_code=404, detail=f"Project directory not found: {project_path}")
 
     _, SessionLocal = create_database(project_path)
     db = SessionLocal()
@@ -94,9 +83,7 @@ async def list_schedules(project_name: str):
     from api.database import Schedule
 
     with _get_db_session(project_name) as (db, _):
-        schedules = db.query(Schedule).filter(
-            Schedule.project_name == project_name
-        ).order_by(Schedule.start_time).all()
+        schedules = db.query(Schedule).filter(Schedule.project_name == project_name).order_by(Schedule.start_time).all()
 
         return ScheduleListResponse(
             schedules=[
@@ -126,14 +113,11 @@ async def create_schedule(project_name: str, data: ScheduleCreate):
 
     with _get_db_session(project_name) as (db, project_path):
         # Check schedule limit to prevent resource exhaustion
-        existing_count = db.query(Schedule).filter(
-            Schedule.project_name == project_name
-        ).count()
+        existing_count = db.query(Schedule).filter(Schedule.project_name == project_name).count()
 
         if existing_count >= MAX_SCHEDULES_PER_PROJECT:
             raise HTTPException(
-                status_code=400,
-                detail=f"Maximum schedules per project ({MAX_SCHEDULES_PER_PROJECT}) exceeded"
+                status_code=400, detail=f"Maximum schedules per project ({MAX_SCHEDULES_PER_PROJECT}) exceeded"
             )
 
         # Create schedule record
@@ -153,6 +137,7 @@ async def create_schedule(project_name: str, data: ScheduleCreate):
         # Register with APScheduler if enabled
         if schedule.enabled:
             import logging
+
             logger = logging.getLogger(__name__)
 
             scheduler = get_scheduler()
@@ -161,26 +146,29 @@ async def create_schedule(project_name: str, data: ScheduleCreate):
 
             # Check if we're currently within this schedule's window
             # If so, start the agent immediately (cron won't trigger until next occurrence)
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             is_within = scheduler._is_within_window(schedule, now)
             logger.info(f"Schedule {schedule.id}: is_within_window={is_within}, now={now}, start={schedule.start_time}")
 
             if is_within:
                 # Check for manual stop override
                 from api.database import ScheduleOverride
-                override = db.query(ScheduleOverride).filter(
-                    ScheduleOverride.schedule_id == schedule.id,
-                    ScheduleOverride.override_type == "stop",
-                    ScheduleOverride.expires_at > now,
-                ).first()
+
+                override = (
+                    db.query(ScheduleOverride)
+                    .filter(
+                        ScheduleOverride.schedule_id == schedule.id,
+                        ScheduleOverride.override_type == "stop",
+                        ScheduleOverride.expires_at > now,
+                    )
+                    .first()
+                )
 
                 logger.info(f"Schedule {schedule.id}: has_override={override is not None}")
 
                 if not override:
                     # Start agent immediately
-                    logger.info(
-                        f"Schedule {schedule.id} is within active window, starting agent immediately"
-                    )
+                    logger.info(f"Schedule {schedule.id} is within active window, starting agent immediately")
                     try:
                         await scheduler._start_agent(project_name, project_path, schedule)
                         logger.info(f"Successfully started agent for schedule {schedule.id}")
@@ -209,10 +197,14 @@ async def get_next_scheduled_run(project_name: str):
     from ..services.scheduler_service import get_scheduler
 
     with _get_db_session(project_name) as (db, _):
-        schedules = db.query(Schedule).filter(
-            Schedule.project_name == project_name,
-            Schedule.enabled == True,  # noqa: E712
-        ).all()
+        schedules = (
+            db.query(Schedule)
+            .filter(
+                Schedule.project_name == project_name,
+                Schedule.enabled == True,  # noqa: E712
+            )
+            .all()
+        )
 
         if not schedules:
             return NextRunResponse(
@@ -223,7 +215,7 @@ async def get_next_scheduled_run(project_name: str):
                 active_schedule_count=0,
             )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         scheduler = get_scheduler()
 
         # Find active schedules and calculate next run
@@ -234,11 +226,15 @@ async def get_next_scheduled_run(project_name: str):
         for schedule in schedules:
             if scheduler._is_within_window(schedule, now):
                 # Check for manual stop override
-                override = db.query(ScheduleOverride).filter(
-                    ScheduleOverride.schedule_id == schedule.id,
-                    ScheduleOverride.override_type == "stop",
-                    ScheduleOverride.expires_at > now,
-                ).first()
+                override = (
+                    db.query(ScheduleOverride)
+                    .filter(
+                        ScheduleOverride.schedule_id == schedule.id,
+                        ScheduleOverride.override_type == "stop",
+                        ScheduleOverride.expires_at > now,
+                    )
+                    .first()
+                )
 
                 if not override:
                     # Schedule is active and not manually stopped
@@ -269,10 +265,14 @@ async def get_schedule(project_name: str, schedule_id: int):
     from api.database import Schedule
 
     with _get_db_session(project_name) as (db, _):
-        schedule = db.query(Schedule).filter(
-            Schedule.id == schedule_id,
-            Schedule.project_name == project_name,
-        ).first()
+        schedule = (
+            db.query(Schedule)
+            .filter(
+                Schedule.id == schedule_id,
+                Schedule.project_name == project_name,
+            )
+            .first()
+        )
 
         if not schedule:
             raise HTTPException(status_code=404, detail="Schedule not found")
@@ -292,21 +292,21 @@ async def get_schedule(project_name: str, schedule_id: int):
 
 
 @router.patch("/{schedule_id}", response_model=ScheduleResponse)
-async def update_schedule(
-    project_name: str,
-    schedule_id: int,
-    data: ScheduleUpdate
-):
+async def update_schedule(project_name: str, schedule_id: int, data: ScheduleUpdate):
     """Update an existing schedule."""
     from api.database import Schedule
 
     from ..services.scheduler_service import get_scheduler
 
     with _get_db_session(project_name) as (db, project_path):
-        schedule = db.query(Schedule).filter(
-            Schedule.id == schedule_id,
-            Schedule.project_name == project_name,
-        ).first()
+        schedule = (
+            db.query(Schedule)
+            .filter(
+                Schedule.id == schedule_id,
+                Schedule.project_name == project_name,
+            )
+            .first()
+        )
 
         if not schedule:
             raise HTTPException(status_code=404, detail="Schedule not found")
@@ -353,10 +353,14 @@ async def delete_schedule(project_name: str, schedule_id: int):
     from ..services.scheduler_service import get_scheduler
 
     with _get_db_session(project_name) as (db, _):
-        schedule = db.query(Schedule).filter(
-            Schedule.id == schedule_id,
-            Schedule.project_name == project_name,
-        ).first()
+        schedule = (
+            db.query(Schedule)
+            .filter(
+                Schedule.id == schedule_id,
+                Schedule.project_name == project_name,
+            )
+            .first()
+        )
 
         if not schedule:
             raise HTTPException(status_code=404, detail="Schedule not found")
@@ -375,9 +379,7 @@ def _calculate_window_end(schedule, now: datetime) -> datetime:
     start_hour, start_minute = map(int, schedule.start_time.split(":"))
 
     # Create start time for today in UTC
-    window_start = now.replace(
-        hour=start_hour, minute=start_minute, second=0, microsecond=0
-    )
+    window_start = now.replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
 
     # If current time is before start time, the window started yesterday
     if now < window_start:
@@ -391,9 +393,7 @@ def _calculate_next_start(schedule, now: datetime) -> datetime | None:
     start_hour, start_minute = map(int, schedule.start_time.split(":"))
 
     # Create start time for today
-    candidate = now.replace(
-        hour=start_hour, minute=start_minute, second=0, microsecond=0
-    )
+    candidate = now.replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
 
     # If already past today's start time, check tomorrow
     if candidate <= now:

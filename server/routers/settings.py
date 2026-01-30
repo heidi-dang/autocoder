@@ -13,8 +13,8 @@ from pathlib import Path
 
 from fastapi import APIRouter
 
-from ..schemas import ModelInfo, ModelsResponse, SettingsResponse, SettingsUpdate
 from .. import ollama_client
+from ..schemas import ModelInfo, ModelsResponse, SettingsResponse, SettingsUpdate
 
 # Mimetype fix for Windows - must run before StaticFiles is mounted
 mimetypes.add_type("text/javascript", ".js", True)
@@ -109,7 +109,7 @@ def _parse_bool(value: str | None, default: bool = False) -> bool:
 async def get_settings():
     """Get current global settings."""
     all_settings = get_all_settings()
-    
+
     # Mask Gemini API key for security (show only last 4 chars)
     gemini_key = all_settings.get("gemini_api_key")
     masked_key = None
@@ -142,28 +142,30 @@ async def update_settings(update: SettingsUpdate):
 
     if update.testing_agent_ratio is not None:
         set_setting("testing_agent_ratio", str(update.testing_agent_ratio))
-    
+
     if update.ai_provider is not None:
         set_setting("ai_provider", update.ai_provider)
-    
+
     if update.ollama_base_url is not None:
         set_setting("ollama_base_url", update.ollama_base_url)
         # Update environment variable for ollama_client
         import os
+
         os.environ["OLLAMA_BASE_URL"] = update.ollama_base_url
-    
+
     if update.ollama_model is not None:
         set_setting("ollama_model", update.ollama_model)
-    
+
     if update.gemini_api_key is not None:
         set_setting("gemini_api_key", update.gemini_api_key)
         # Update environment variable for gemini_client
         import os
+
         os.environ["GEMINI_API_KEY"] = update.gemini_api_key
 
     # Return updated settings
     all_settings = get_all_settings()
-    
+
     # Mask Gemini API key for security
     gemini_key = all_settings.get("gemini_api_key")
     masked_key = None
@@ -171,7 +173,7 @@ async def update_settings(update: SettingsUpdate):
         masked_key = "*" * (len(gemini_key) - 4) + gemini_key[-4:]
     elif gemini_key:
         masked_key = "****"
-    
+
     return SettingsResponse(
         yolo_mode=_parse_yolo_mode(all_settings.get("yolo_mode")),
         model=all_settings.get("model", DEFAULT_MODEL),

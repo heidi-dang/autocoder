@@ -34,12 +34,12 @@ DEFAULT_PLAYWRIGHT_BROWSER = "firefox"
 # These allow using alternative API endpoints (e.g., GLM via z.ai) without
 # affecting the user's global Claude Code settings
 API_ENV_VARS = [
-    "ANTHROPIC_BASE_URL",              # Custom API endpoint (e.g., https://api.z.ai/api/anthropic)
-    "ANTHROPIC_AUTH_TOKEN",            # API authentication token
-    "API_TIMEOUT_MS",                  # Request timeout in milliseconds
+    "ANTHROPIC_BASE_URL",  # Custom API endpoint (e.g., https://api.z.ai/api/anthropic)
+    "ANTHROPIC_AUTH_TOKEN",  # API authentication token
+    "API_TIMEOUT_MS",  # Request timeout in milliseconds
     "ANTHROPIC_DEFAULT_SONNET_MODEL",  # Model override for Sonnet
-    "ANTHROPIC_DEFAULT_OPUS_MODEL",    # Model override for Opus
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL",   # Model override for Haiku
+    "ANTHROPIC_DEFAULT_OPUS_MODEL",  # Model override for Opus
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL",  # Model override for Haiku
 ]
 
 
@@ -54,7 +54,6 @@ def get_playwright_headless() -> bool:
     truthy = {"true", "1", "yes", "on"}
     falsy = {"false", "0", "no", "off"}
     if value not in truthy | falsy:
-        print(f"   - Warning: Invalid PLAYWRIGHT_HEADLESS='{value}', defaulting to {DEFAULT_PLAYWRIGHT_HEADLESS}")
         return DEFAULT_PLAYWRIGHT_HEADLESS
     return value in truthy
 
@@ -73,9 +72,6 @@ def get_playwright_browser() -> str:
     """
     value = os.getenv("PLAYWRIGHT_BROWSER", DEFAULT_PLAYWRIGHT_BROWSER).strip().lower()
     if value not in VALID_PLAYWRIGHT_BROWSERS:
-        print(f"   - Warning: Invalid PLAYWRIGHT_BROWSER='{value}', "
-              f"valid options: {', '.join(sorted(VALID_PLAYWRIGHT_BROWSERS))}. "
-              f"Defaulting to {DEFAULT_PLAYWRIGHT_BROWSER}")
         return DEFAULT_PLAYWRIGHT_BROWSER
     return value
 
@@ -112,7 +108,6 @@ PLAYWRIGHT_TOOLS = [
     "mcp__playwright__browser_navigate_back",
     "mcp__playwright__browser_take_screenshot",
     "mcp__playwright__browser_snapshot",
-
     # Element interaction
     "mcp__playwright__browser_click",
     "mcp__playwright__browser_type",
@@ -121,13 +116,11 @@ PLAYWRIGHT_TOOLS = [
     "mcp__playwright__browser_hover",
     "mcp__playwright__browser_drag",
     "mcp__playwright__browser_press_key",
-
     # JavaScript & debugging
     "mcp__playwright__browser_evaluate",
     # "mcp__playwright__browser_run_code",  # REMOVED - causes Playwright MCP server crash
     "mcp__playwright__browser_console_messages",
     "mcp__playwright__browser_network_requests",
-
     # Browser management
     "mcp__playwright__browser_close",
     "mcp__playwright__browser_resize",
@@ -225,23 +218,17 @@ def create_client(
     with open(settings_file, "w") as f:
         json.dump(security_settings, f, indent=2)
 
-    print(f"Created security settings at {settings_file}")
-    print("   - Sandbox enabled (OS-level bash isolation)")
-    print(f"   - Filesystem restricted to: {project_dir.resolve()}")
-    print("   - Bash commands restricted to allowlist (see security.py)")
     if yolo_mode:
-        print("   - MCP servers: features (database) - YOLO MODE (no Playwright)")
+        pass
     else:
-        print("   - MCP servers: playwright (browser), features (database)")
-    print("   - Project settings enabled (skills, commands, CLAUDE.md)")
-    print()
+        pass
 
     # Use system Claude CLI instead of bundled one (avoids Bun runtime crash on Windows)
     system_cli = shutil.which("claude")
     if system_cli:
-        print(f"   - Using system CLI: {system_cli}")
+        pass
     else:
-        print("   - Warning: System 'claude' CLI not found, using bundled CLI")
+        pass
 
     # Build MCP servers config - features is always included, playwright only in standard mode
     mcp_servers = {
@@ -262,12 +249,13 @@ def create_client(
         browser = get_playwright_browser()
         playwright_args = [
             "@playwright/mcp@latest",
-            "--viewport-size", "1280x720",
-            "--browser", browser,
+            "--viewport-size",
+            "1280x720",
+            "--browser",
+            browser,
         ]
         if get_playwright_headless():
             playwright_args.append("--headless")
-        print(f"   - Browser: {browser} (headless={get_playwright_headless()})")
 
         # Browser isolation for parallel execution
         # Each agent gets its own isolated browser context to prevent tab conflicts
@@ -276,7 +264,6 @@ def create_client(
             # This creates a fresh, isolated context without persistent state
             # Note: --isolated and --user-data-dir are mutually exclusive
             playwright_args.append("--isolated")
-            print(f"   - Browser isolation enabled for agent: {agent_id}")
 
         mcp_servers["playwright"] = {
             "command": "npx",
@@ -299,11 +286,10 @@ def create_client(
     is_ollama = "localhost:11434" in base_url or "127.0.0.1:11434" in base_url
 
     if sdk_env:
-        print(f"   - API overrides: {', '.join(sdk_env.keys())}")
         if is_ollama:
-            print("   - Ollama Mode: Using local models")
+            pass
         elif "ANTHROPIC_BASE_URL" in sdk_env:
-            print(f"   - GLM Mode: Using {sdk_env['ANTHROPIC_BASE_URL']}")
+            pass
 
     # Create a wrapper for bash_security_hook that passes project_dir via context
     async def bash_hook_with_context(input_data, tool_use_id=None, context=None):
@@ -335,12 +321,12 @@ def create_client(
         custom_instructions = input_data.get("custom_instructions")
 
         if trigger == "auto":
-            print("[Context] Auto-compaction triggered (context approaching limit)")
+            pass
         else:
-            print("[Context] Manual compaction requested")
+            pass
 
         if custom_instructions:
-            print(f"[Context] Custom instructions: {custom_instructions}")
+            pass
 
         # Return empty dict to allow compaction to proceed with default behavior
         # To customize, return:

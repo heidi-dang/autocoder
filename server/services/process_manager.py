@@ -13,9 +13,10 @@ import re
 import subprocess
 import sys
 import threading
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Awaitable, Callable, Literal, Set
+from typing import Literal
 
 import psutil
 
@@ -29,25 +30,25 @@ logger = logging.getLogger(__name__)
 
 # Patterns for sensitive data that should be redacted from output
 SENSITIVE_PATTERNS = [
-    r'sk-[a-zA-Z0-9]{20,}',  # Anthropic API keys
-    r'ANTHROPIC_API_KEY=[^\s]+',
-    r'api[_-]?key[=:][^\s]+',
-    r'token[=:][^\s]+',
-    r'password[=:][^\s]+',
-    r'secret[=:][^\s]+',
-    r'ghp_[a-zA-Z0-9]{36,}',  # GitHub personal access tokens
-    r'gho_[a-zA-Z0-9]{36,}',  # GitHub OAuth tokens
-    r'ghs_[a-zA-Z0-9]{36,}',  # GitHub server tokens
-    r'ghr_[a-zA-Z0-9]{36,}',  # GitHub refresh tokens
-    r'aws[_-]?access[_-]?key[=:][^\s]+',  # AWS keys
-    r'aws[_-]?secret[=:][^\s]+',
+    r"sk-[a-zA-Z0-9]{20,}",  # Anthropic API keys
+    r"ANTHROPIC_API_KEY=[^\s]+",
+    r"api[_-]?key[=:][^\s]+",
+    r"token[=:][^\s]+",
+    r"password[=:][^\s]+",
+    r"secret[=:][^\s]+",
+    r"ghp_[a-zA-Z0-9]{36,}",  # GitHub personal access tokens
+    r"gho_[a-zA-Z0-9]{36,}",  # GitHub OAuth tokens
+    r"ghs_[a-zA-Z0-9]{36,}",  # GitHub server tokens
+    r"ghr_[a-zA-Z0-9]{36,}",  # GitHub refresh tokens
+    r"aws[_-]?access[_-]?key[=:][^\s]+",  # AWS keys
+    r"aws[_-]?secret[=:][^\s]+",
 ]
 
 
 def sanitize_output(line: str) -> str:
     """Remove sensitive information from output lines."""
     for pattern in SENSITIVE_PATTERNS:
-        line = re.sub(pattern, '[REDACTED]', line, flags=re.IGNORECASE)
+        line = re.sub(pattern, "[REDACTED]", line, flags=re.IGNORECASE)
     return line
 
 
@@ -87,8 +88,8 @@ class AgentProcessManager:
         self.testing_agent_ratio: int = 1  # Regression testing agents (0-3)
 
         # Support multiple callbacks (for multiple WebSocket clients)
-        self._output_callbacks: Set[Callable[[str], Awaitable[None]]] = set()
-        self._status_callbacks: Set[Callable[[str], Awaitable[None]]] = set()
+        self._output_callbacks: set[Callable[[str], Awaitable[None]]] = set()
+        self._status_callbacks: set[Callable[[str], Awaitable[None]]] = set()
         self._callbacks_lock = threading.Lock()
 
         # Lock file to prevent multiple instances (stored in project directory)
@@ -211,6 +212,7 @@ class AgentProcessManager:
             # Atomic lock creation using O_CREAT | O_EXCL
             # This prevents TOCTOU race conditions
             import os
+
             fd = os.open(str(self.lock_file), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             os.write(fd, lock_content.encode())
             os.close(fd)
@@ -246,9 +248,7 @@ class AgentProcessManager:
             loop = asyncio.get_running_loop()
             while True:
                 # Use run_in_executor for blocking readline
-                line = await loop.run_in_executor(
-                    None, self.process.stdout.readline
-                )
+                line = await loop.run_in_executor(None, self.process.stdout.readline)
                 if not line:
                     break
 
@@ -264,7 +264,7 @@ class AgentProcessManager:
                 if not auth_error_detected and is_auth_error(decoded):
                     auth_error_detected = True
                     # Broadcast auth error help message
-                    for help_line in AUTH_ERROR_HELP.strip().split('\n'):
+                    for help_line in AUTH_ERROR_HELP.strip().split("\n"):
                         await self._broadcast_output(help_line)
 
                 await self._broadcast_output(sanitized)
@@ -280,9 +280,9 @@ class AgentProcessManager:
                 if exit_code != 0 and self.status == "running":
                     # Check buffered output for auth errors if we haven't detected one yet
                     if not auth_error_detected:
-                        combined_output = '\n'.join(output_buffer)
+                        combined_output = "\n".join(output_buffer)
                         if is_auth_error(combined_output):
-                            for help_line in AUTH_ERROR_HELP.strip().split('\n'):
+                            for help_line in AUTH_ERROR_HELP.strip().split("\n"):
                                 await self._broadcast_output(help_line)
                     self.status = "crashed"
                 elif self.status == "running":
@@ -408,8 +408,10 @@ class AgentProcessManager:
             result = await loop.run_in_executor(None, kill_process_tree, proc, 10.0)
             logger.debug(
                 "Process tree kill result: status=%s, children=%d (terminated=%d, killed=%d)",
-                result.status, result.children_found,
-                result.children_terminated, result.children_killed
+                result.status,
+                result.children_found,
+                result.children_terminated,
+                result.children_killed,
             )
 
             self._remove_lock()
@@ -559,6 +561,7 @@ def cleanup_orphaned_locks() -> int:
         Number of orphaned lock files cleaned up
     """
     import sys
+
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
@@ -604,10 +607,7 @@ def cleanup_orphaned_locks() -> int:
                         cmdline = " ".join(proc.cmdline())
                         if "autonomous_agent_demo.py" in cmdline:
                             # Process is still running, don't remove
-                            logger.info(
-                                "Found running agent for project '%s' (PID %d)",
-                                name, pid
-                            )
+                            logger.info("Found running agent for project '%s' (PID %d)", name, pid)
                             continue
                     except (psutil.NoSuchProcess, psutil.AccessDenied):
                         pass
@@ -619,9 +619,7 @@ def cleanup_orphaned_locks() -> int:
 
             except (ValueError, OSError) as e:
                 # Invalid lock file content - remove it
-                logger.warning(
-                    "Removing invalid lock file for project '%s': %s", name, e
-                )
+                logger.warning("Removing invalid lock file for project '%s': %s", name, e)
                 lock_file.unlink(missing_ok=True)
                 cleaned += 1
 

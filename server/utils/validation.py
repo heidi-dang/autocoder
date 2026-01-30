@@ -20,9 +20,9 @@ def validate_project_name(name: str) -> str:
     Raises:
         HTTPException: If name is invalid
     """
-    if not re.match(r'^[a-zA-Z0-9_-]{1,50}$', name):
+    if not re.match(r"^[a-zA-Z0-9_-]{1,50}$", name):
         raise HTTPException(
             status_code=400,
-            detail="Invalid project name. Use only letters, numbers, hyphens, and underscores (1-50 chars)."
+            detail="Invalid project name. Use only letters, numbers, hyphens, and underscores (1-50 chars).",
         )
     return name

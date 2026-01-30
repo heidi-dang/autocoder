@@ -10,7 +10,7 @@ Environment variables:
 """
 
 import os
-from typing import AsyncGenerator, Iterable, Optional
+from collections.abc import AsyncGenerator, Iterable
 
 import httpx
 
@@ -32,60 +32,59 @@ def is_ollama_configured() -> bool:
 async def get_available_models() -> list[dict]:
     """
     Fetch available models from Ollama instance.
-    
+
     Returns:
         List of model info dicts with 'name', 'modified_at', 'size', etc.
     """
     base_url = get_ollama_base_url()
-    
+
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(f"{base_url}/api/tags")
             response.raise_for_status()
             data = response.json()
             return data.get("models", [])
-    except Exception as e:
-        print(f"Error fetching Ollama models: {e}")
+    except Exception:
         return []
 
 
 async def stream_chat(
     user_message: str,
     *,
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
     model: str = "llama3.2",
-    extra_messages: Optional[Iterable[dict]] = None,
+    extra_messages: Iterable[dict] | None = None,
 ) -> AsyncGenerator[str, None]:
     """
     Stream a chat completion from Ollama.
-    
+
     Args:
         user_message: Primary user input
         system_prompt: Optional system prompt
         model: Model name (e.g., "llama3.2", "mistral", "codellama")
         extra_messages: Optional prior messages (list of {"role","content"})
-        
+
     Yields:
         Text chunks as they arrive.
     """
     base_url = get_ollama_base_url()
-    
+
     messages = []
-    
+
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
-    
+
     if extra_messages:
         messages.extend(extra_messages)
-    
+
     messages.append({"role": "user", "content": user_message})
-    
+
     payload = {
         "model": model,
         "messages": messages,
         "stream": True,
     }
-    
+
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             async with client.stream(
@@ -98,6 +97,7 @@ async def stream_chat(
                     if line.strip():
                         try:
                             import json
+
                             data = json.loads(line)
                             if "message" in data:
                                 content = data["message"].get("content", "")
@@ -112,12 +112,12 @@ async def stream_chat(
 async def test_connection() -> tuple[bool, str]:
     """
     Test connection to Ollama instance.
-    
+
     Returns:
         Tuple of (success: bool, message: str)
     """
     base_url = get_ollama_base_url()
-    
+
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get(f"{base_url}/api/tags")

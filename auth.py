@@ -80,4 +80,3 @@ After logging in, try starting the agent again.
 
 def print_auth_error_help() -> None:
     """Print helpful message when authentication error is detected (CLI version)."""
-    print(AUTH_ERROR_HELP_CLI)

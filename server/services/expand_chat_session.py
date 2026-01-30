@@ -14,9 +14,9 @@ import re
 import shutil
 import threading
 import uuid
+from collections.abc import AsyncGenerator
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncGenerator, Optional
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from dotenv import load_dotenv
@@ -76,15 +76,15 @@ class ExpandChatSession:
         """
         self.project_name = project_name
         self.project_dir = project_dir
-        self.client: Optional[ClaudeSDKClient] = None
+        self.client: ClaudeSDKClient | None = None
         self.messages: list[dict] = []
         self.complete: bool = False
         self.created_at = datetime.now()
-        self._conversation_id: Optional[str] = None
+        self._conversation_id: str | None = None
         self._client_entered: bool = False
         self.features_created: int = 0
         self.created_feature_ids: list[int] = []
-        self._settings_file: Optional[Path] = None
+        self._settings_file: Path | None = None
         self._query_lock = asyncio.Lock()
 
     async def close(self) -> None:
@@ -115,10 +115,7 @@ class ExpandChatSession:
         skill_path = ROOT_DIR / ".claude" / "commands" / "expand-project.md"
 
         if not skill_path.exists():
-            yield {
-                "type": "error",
-                "content": f"Expand project skill not found at {skill_path}"
-            }
+            yield {"type": "error", "content": f"Expand project skill not found at {skill_path}"}
             return
 
         # Verify project has existing spec
@@ -126,7 +123,7 @@ class ExpandChatSession:
         if not spec_path.exists():
             yield {
                 "type": "error",
-                "content": "Project has no app_spec.txt. Please create it first using spec creation."
+                "content": "Project has no app_spec.txt. Please create it first using spec creation.",
             }
             return
 
@@ -140,7 +137,7 @@ class ExpandChatSession:
         if not system_cli:
             yield {
                 "type": "error",
-                "content": "Claude CLI not found. Please install it: npm install -g @anthropic-ai/claude-code"
+                "content": "Claude CLI not found. Please install it: npm install -g @anthropic-ai/claude-code",
             }
             return
 
@@ -193,10 +190,7 @@ class ExpandChatSession:
             self._client_entered = True
         except Exception:
             logger.exception("Failed to create Claude client")
-            yield {
-                "type": "error",
-                "content": "Failed to initialize Claude"
-            }
+            yield {"type": "error", "content": "Failed to initialize Claude"}
             return
 
         # Start the conversation
@@ -207,15 +201,10 @@ class ExpandChatSession:
             yield {"type": "response_done"}
         except Exception:
             logger.exception("Failed to start expand chat")
-            yield {
-                "type": "error",
-                "content": "Failed to start conversation"
-            }
+            yield {"type": "error", "content": "Failed to start conversation"}
 
     async def send_message(
-        self,
-        user_message: str,
-        attachments: list[ImageAttachment] | None = None
+        self, user_message: str, attachments: list[ImageAttachment] | None = None
     ) -> AsyncGenerator[dict, None]:
         """
         Send user message and stream Claude's response.
@@ -232,19 +221,18 @@ class ExpandChatSession:
             - {"type": "error", "content": str}
         """
         if not self.client:
-            yield {
-                "type": "error",
-                "content": "Session not initialized. Call start() first."
-            }
+            yield {"type": "error", "content": "Session not initialized. Call start() first."}
             return
 
         # Store the user message
-        self.messages.append({
-            "role": "user",
-            "content": user_message,
-            "has_attachments": bool(attachments),
-            "timestamp": datetime.now().isoformat()
-        })
+        self.messages.append(
+            {
+                "role": "user",
+                "content": user_message,
+                "has_attachments": bool(attachments),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
         try:
             # Use lock to prevent concurrent queries from corrupting the response stream
@@ -254,15 +242,10 @@ class ExpandChatSession:
             yield {"type": "response_done"}
         except Exception:
             logger.exception("Error during Claude query")
-            yield {
-                "type": "error",
-                "content": "Error while processing message"
-            }
+            yield {"type": "error", "content": "Error while processing message"}
 
     async def _query_claude(
-        self,
-        message: str,
-        attachments: list[ImageAttachment] | None = None
+        self, message: str, attachments: list[ImageAttachment] | None = None
     ) -> AsyncGenerator[dict, None]:
         """
         Internal method to query Claude and stream responses.
@@ -278,14 +261,16 @@ class ExpandChatSession:
             if message:
                 content_blocks.append({"type": "text", "text": message})
             for att in attachments:
-                content_blocks.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": att.mimeType,
-                        "data": att.base64Data,
+                content_blocks.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": att.mimeType,
+                            "data": att.base64Data,
+                        },
                     }
-                })
+                )
             await self.client.query(_make_multimodal_message(content_blocks))
             logger.info(f"Sent multimodal message with {len(attachments)} image(s)")
         else:
@@ -308,17 +293,12 @@ class ExpandChatSession:
                             full_response += text
                             yield {"type": "text", "content": text}
 
-                            self.messages.append({
-                                "role": "assistant",
-                                "content": text,
-                                "timestamp": datetime.now().isoformat()
-                            })
+                            self.messages.append(
+                                {"role": "assistant", "content": text, "timestamp": datetime.now().isoformat()}
+                            )
 
         # Check for feature creation blocks in full response (handle multiple blocks)
-        features_matches = re.findall(
-            r'<features_to_create>\s*(\[[\s\S]*?\])\s*</features_to_create>',
-            full_response
-        )
+        features_matches = re.findall(r"<features_to_create>\s*(\[[\s\S]*?\])\s*</features_to_create>", full_response)
 
         if features_matches:
             # Collect all features from all blocks, deduplicating by name
@@ -348,19 +328,12 @@ class ExpandChatSession:
                         self.features_created += len(created)
                         self.created_feature_ids.extend([f["id"] for f in created])
 
-                        yield {
-                            "type": "features_created",
-                            "count": len(created),
-                            "features": created
-                        }
+                        yield {"type": "features_created", "count": len(created), "features": created}
 
                         logger.info(f"Created {len(created)} features for {self.project_name}")
                 except Exception:
                     logger.exception("Failed to create features")
-                    yield {
-                        "type": "error",
-                        "content": "Failed to create features"
-                    }
+                    yield {"type": "error", "content": "Failed to create features"}
 
     async def _create_features_bulk(self, features: list[dict]) -> list[dict]:
         """
@@ -378,6 +351,7 @@ class ExpandChatSession:
         """
         # Import database classes
         import sys
+
         root = Path(__file__).parent.parent.parent
         if str(root) not in sys.path:
             sys.path.insert(0, str(root))
@@ -449,7 +423,7 @@ _expand_sessions: dict[str, ExpandChatSession] = {}
 _expand_sessions_lock = threading.Lock()
 
 
-def get_expand_session(project_name: str) -> Optional[ExpandChatSession]:
+def get_expand_session(project_name: str) -> ExpandChatSession | None:
     """Get an existing expansion session for a project."""
     with _expand_sessions_lock:
         return _expand_sessions.get(project_name)
@@ -457,7 +431,7 @@ def get_expand_session(project_name: str) -> Optional[ExpandChatSession]:
 
 async def create_expand_session(project_name: str, project_dir: Path) -> ExpandChatSession:
     """Create a new expansion session for a project, closing any existing one."""
-    old_session: Optional[ExpandChatSession] = None
+    old_session: ExpandChatSession | None = None
 
     with _expand_sessions_lock:
         old_session = _expand_sessions.pop(project_name, None)
@@ -475,7 +449,7 @@ async def create_expand_session(project_name: str, project_dir: Path) -> ExpandC
 
 async def remove_expand_session(project_name: str) -> None:
     """Remove and close an expansion session."""
-    session: Optional[ExpandChatSession] = None
+    session: ExpandChatSession | None = None
 
     with _expand_sessions_lock:
         session = _expand_sessions.pop(project_name, None)

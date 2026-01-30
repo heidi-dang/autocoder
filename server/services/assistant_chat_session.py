@@ -13,9 +13,9 @@ import os
 import shutil
 import sys
 import threading
+from collections.abc import AsyncGenerator
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncGenerator, Optional
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from dotenv import load_dotenv
@@ -167,7 +167,7 @@ class AssistantChatSession:
     Persists conversation history to SQLite.
     """
 
-    def __init__(self, project_name: str, project_dir: Path, conversation_id: Optional[int] = None):
+    def __init__(self, project_name: str, project_dir: Path, conversation_id: int | None = None):
         """
         Initialize the session.
 
@@ -179,7 +179,7 @@ class AssistantChatSession:
         self.project_name = project_name
         self.project_dir = project_dir
         self.conversation_id = conversation_id
-        self.client: Optional[ClaudeSDKClient] = None
+        self.client: ClaudeSDKClient | None = None
         self._client_entered: bool = False
         self.created_at = datetime.now()
         self._history_loaded: bool = False  # Track if we've loaded history for resumed conversations
@@ -446,7 +446,7 @@ class AssistantChatSession:
         if full_response and self.conversation_id:
             add_message(self.project_dir, self.conversation_id, "assistant", full_response)
 
-    def get_conversation_id(self) -> Optional[int]:
+    def get_conversation_id(self) -> int | None:
         """Get the current conversation ID."""
         return self.conversation_id
 
@@ -456,16 +456,14 @@ _sessions: dict[str, AssistantChatSession] = {}
 _sessions_lock = threading.Lock()
 
 
-def get_session(project_name: str) -> Optional[AssistantChatSession]:
+def get_session(project_name: str) -> AssistantChatSession | None:
     """Get an existing session for a project."""
     with _sessions_lock:
         return _sessions.get(project_name)
 
 
 async def create_session(
-    project_name: str,
-    project_dir: Path,
-    conversation_id: Optional[int] = None
+    project_name: str, project_dir: Path, conversation_id: int | None = None
 ) -> AssistantChatSession:
     """
     Create a new session for a project, closing any existing one.
@@ -475,7 +473,7 @@ async def create_session(
         project_dir: Absolute path to the project directory
         conversation_id: Optional conversation ID to resume
     """
-    old_session: Optional[AssistantChatSession] = None
+    old_session: AssistantChatSession | None = None
 
     with _sessions_lock:
         old_session = _sessions.pop(project_name, None)
@@ -493,7 +491,7 @@ async def create_session(
 
 async def remove_session(project_name: str) -> None:
     """Remove and close a session."""
-    session: Optional[AssistantChatSession] = None
+    session: AssistantChatSession | None = None
 
     with _sessions_lock:
         session = _sessions.pop(project_name, None)

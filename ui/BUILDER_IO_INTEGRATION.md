@@ -68,12 +68,12 @@ http://localhost:5173?builder.edit=true&builder.token=YOUR_API_KEY
 
 ### Development Features
 
-✅ **Hot Module Reloading (HMR)** - See changes instantly  
-✅ **Builder.io Visual Editing** - Edit components without code  
-✅ **Source Maps** - Full TypeScript debugging  
-✅ **CORS Headers** - Enable cross-origin requests  
-✅ **Environment Variables** - Secure API key management  
-✅ **Component Registration** - Auto-register custom components  
+✅ **Hot Module Reloading (HMR)** - See changes instantly
+✅ **Builder.io Visual Editing** - Edit components without code
+✅ **Source Maps** - Full TypeScript debugging
+✅ **CORS Headers** - Enable cross-origin requests
+✅ **Environment Variables** - Secure API key management
+✅ **Component Registration** - Auto-register custom components
 
 ## 📱 Component Registration
 

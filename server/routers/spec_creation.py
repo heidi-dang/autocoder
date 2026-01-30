@@ -9,7 +9,6 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ValidationError
@@ -34,25 +33,29 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 def _get_project_path(project_name: str) -> Path:
     """Get project path from registry."""
     import sys
+
     root = Path(__file__).parent.parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
     from registry import get_project_path
+
     return get_project_path(project_name)
 
 
 def validate_project_name(name: str) -> bool:
     """Validate project name to prevent path traversal."""
-    return bool(re.match(r'^[a-zA-Z0-9_-]{1,50}$', name))
+    return bool(re.match(r"^[a-zA-Z0-9_-]{1,50}$", name))
 
 
 # ============================================================================
 # REST Endpoints
 # ============================================================================
 
+
 class SpecSessionStatus(BaseModel):
     """Status of a spec creation session."""
+
     project_name: str
     is_active: bool
     is_complete: bool
@@ -99,10 +102,11 @@ async def cancel_session(project_name: str):
 
 class SpecFileStatus(BaseModel):
     """Status of spec files on disk (from .spec_status.json)."""
+
     exists: bool
     status: str  # "complete" | "in_progress" | "not_started"
-    feature_count: Optional[int] = None
-    timestamp: Optional[str] = None
+    feature_count: int | None = None
+    timestamp: str | None = None
     files_written: list[str] = []
 
 
@@ -162,6 +166,7 @@ async def get_spec_file_status(project_name: str):
 # WebSocket Endpoint
 # ============================================================================
 
+
 @router.websocket("/ws/{project_name}")
 async def spec_chat_websocket(websocket: WebSocket, project_name: str):
     """
@@ -200,7 +205,7 @@ async def spec_chat_websocket(websocket: WebSocket, project_name: str):
 
     await websocket.accept()
 
-    session: Optional[SpecChatSession] = None
+    session: SpecChatSession | None = None
 
     try:
         while True:
@@ -245,10 +250,9 @@ async def spec_chat_websocket(websocket: WebSocket, project_name: str):
                     if not session:
                         session = get_session(project_name)
                         if not session:
-                            await websocket.send_json({
-                                "type": "error",
-                                "content": "No active session. Send 'start' first."
-                            })
+                            await websocket.send_json(
+                                {"type": "error", "content": "No active session. Send 'start' first."}
+                            )
                             continue
 
                     user_content = message.get("content", "").strip()
@@ -262,18 +266,12 @@ async def spec_chat_websocket(websocket: WebSocket, project_name: str):
                                 attachments.append(ImageAttachment(**raw_att))
                         except (ValidationError, Exception) as e:
                             logger.warning(f"Invalid attachment data: {e}")
-                            await websocket.send_json({
-                                "type": "error",
-                                "content": f"Invalid attachment: {str(e)}"
-                            })
+                            await websocket.send_json({"type": "error", "content": f"Invalid attachment: {str(e)}"})
                             continue
 
                     # Allow empty content if attachments are present
                     if not user_content and not attachments:
-                        await websocket.send_json({
-                            "type": "error",
-                            "content": "Empty message"
-                        })
+                        await websocket.send_json({"type": "error", "content": "Empty message"})
                         continue
 
                     # Track spec completion state
@@ -303,10 +301,7 @@ async def spec_chat_websocket(websocket: WebSocket, project_name: str):
                     if not session:
                         session = get_session(project_name)
                         if not session:
-                            await websocket.send_json({
-                                "type": "error",
-                                "content": "No active session"
-                            })
+                            await websocket.send_json({"type": "error", "content": "No active session"})
                             continue
 
                     # Format the answers as a natural response
@@ -346,16 +341,10 @@ async def spec_chat_websocket(websocket: WebSocket, project_name: str):
                         await websocket.send_json(chunk)
 
                 else:
-                    await websocket.send_json({
-                        "type": "error",
-                        "content": f"Unknown message type: {msg_type}"
-                    })
+                    await websocket.send_json({"type": "error", "content": f"Unknown message type: {msg_type}"})
 
             except json.JSONDecodeError:
-                await websocket.send_json({
-                    "type": "error",
-                    "content": "Invalid JSON"
-                })
+                await websocket.send_json({"type": "error", "content": "Invalid JSON"})
 
     except WebSocketDisconnect:
         logger.info(f"Spec chat WebSocket disconnected for {project_name}")
@@ -363,10 +352,7 @@ async def spec_chat_websocket(websocket: WebSocket, project_name: str):
     except Exception as e:
         logger.exception(f"Spec chat WebSocket error for {project_name}")
         try:
-            await websocket.send_json({
-                "type": "error",
-                "content": f"Server error: {str(e)}"
-            })
+            await websocket.send_json({"type": "error", "content": f"Server error: {str(e)}"})
         except Exception:
             pass
 

@@ -56,23 +56,28 @@ SQLITE_MAX_RETRIES = 3  # number of retry attempts on busy database
 # Exceptions
 # =============================================================================
 
+
 class RegistryError(Exception):
     """Base registry exception."""
+
     pass
 
 
 class RegistryNotFound(RegistryError):
     """Registry file doesn't exist."""
+
     pass
 
 
 class RegistryCorrupted(RegistryError):
     """Registry database is corrupted."""
+
     pass
 
 
 class RegistryPermissionDenied(RegistryError):
     """Can't read/write registry file."""
+
     pass
 
 
@@ -85,6 +90,7 @@ Base = declarative_base()
 
 class Project(Base):
     """SQLAlchemy model for registered projects."""
+
     __tablename__ = "projects"
 
     name = Column(String(50), primary_key=True, index=True)
@@ -94,6 +100,7 @@ class Project(Base):
 
 class Settings(Base):
     """SQLAlchemy model for global settings (key-value store)."""
+
     __tablename__ = "settings"
 
     key = Column(String(50), primary_key=True)
@@ -148,7 +155,7 @@ def _get_engine():
                     connect_args={
                         "check_same_thread": False,
                         "timeout": SQLITE_TIMEOUT,
-                    }
+                    },
                 )
                 Base.metadata.create_all(bind=_engine)
                 _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
@@ -202,10 +209,9 @@ def _with_retry(func, *args, **kwargs):
             error_str = str(e).lower()
             if "database is locked" in error_str or "sqlite_busy" in error_str:
                 if attempt < SQLITE_MAX_RETRIES - 1:
-                    wait_time = (2 ** attempt) * 0.1  # Exponential backoff: 0.1s, 0.2s, 0.4s
+                    wait_time = (2**attempt) * 0.1  # Exponential backoff: 0.1s, 0.2s, 0.4s
                     logger.warning(
-                        "Database busy, retrying in %.1fs (attempt %d/%d)",
-                        wait_time, attempt + 1, SQLITE_MAX_RETRIES
+                        "Database busy, retrying in %.1fs (attempt %d/%d)", wait_time, attempt + 1, SQLITE_MAX_RETRIES
                     )
                     time.sleep(wait_time)
                     continue
@@ -216,6 +222,7 @@ def _with_retry(func, *args, **kwargs):
 # =============================================================================
 # Project CRUD Functions
 # =============================================================================
+
 
 def register_project(name: str, path: Path) -> None:
     """
@@ -230,11 +237,8 @@ def register_project(name: str, path: Path) -> None:
         RegistryError: If a project with that name already exists.
     """
     # Validate name
-    if not re.match(r'^[a-zA-Z0-9_-]{1,50}$', name):
-        raise ValueError(
-            "Invalid project name. Use only letters, numbers, hyphens, "
-            "and underscores (1-50 chars)."
-        )
+    if not re.match(r"^[a-zA-Z0-9_-]{1,50}$", name):
+        raise ValueError("Invalid project name. Use only letters, numbers, hyphens, and underscores (1-50 chars).")
 
     # Ensure path is absolute
     path = Path(path).resolve()
@@ -245,11 +249,7 @@ def register_project(name: str, path: Path) -> None:
             logger.warning("Attempted to register duplicate project: %s", name)
             raise RegistryError(f"Project '{name}' already exists in registry")
 
-        project = Project(
-            name=name,
-            path=path.as_posix(),
-            created_at=datetime.now()
-        )
+        project = Project(name=name, path=path.as_posix(), created_at=datetime.now())
         session.add(project)
 
     logger.info("Registered project '%s' at path: %s", name, path)
@@ -310,11 +310,7 @@ def list_registered_projects() -> dict[str, dict[str, Any]]:
     try:
         projects = session.query(Project).all()
         return {
-            p.name: {
-                "path": p.path,
-                "created_at": p.created_at.isoformat() if p.created_at else None
-            }
-            for p in projects
+            p.name: {"path": p.path, "created_at": p.created_at.isoformat() if p.created_at else None} for p in projects
         }
     finally:
         session.close()
@@ -336,10 +332,7 @@ def get_project_info(name: str) -> dict[str, Any] | None:
         project = session.query(Project).filter(Project.name == name).first()
         if project is None:
             return None
-        return {
-            "path": project.path,
-            "created_at": project.created_at.isoformat() if project.created_at else None
-        }
+        return {"path": project.path, "created_at": project.created_at.isoformat() if project.created_at else None}
     finally:
         session.close()
 
@@ -370,6 +363,7 @@ def update_project_path(name: str, new_path: Path) -> bool:
 # =============================================================================
 # Validation Functions
 # =============================================================================
+
 
 def validate_project_path(path: Path) -> tuple[bool, str]:
     """
@@ -441,11 +435,9 @@ def list_valid_projects() -> list[dict[str, Any]]:
             path = Path(p.path)
             is_valid, _ = validate_project_path(path)
             if is_valid:
-                valid.append({
-                    "name": p.name,
-                    "path": p.path,
-                    "created_at": p.created_at.isoformat() if p.created_at else None
-                })
+                valid.append(
+                    {"name": p.name, "path": p.path, "created_at": p.created_at.isoformat() if p.created_at else None}
+                )
         return valid
     finally:
         session.close()
@@ -454,6 +446,7 @@ def list_valid_projects() -> list[dict[str, Any]]:
 # =============================================================================
 # Settings CRUD Functions
 # =============================================================================
+
 
 def get_setting(key: str, default: str | None = None) -> str | None:
     """
@@ -493,11 +486,7 @@ def set_setting(key: str, value: str) -> None:
             setting.value = value
             setting.updated_at = datetime.now()
         else:
-            setting = Settings(
-                key=key,
-                value=value,
-                updated_at=datetime.now()
-            )
+            setting = Settings(key=key, value=value, updated_at=datetime.now())
             session.add(setting)
 
     logger.debug("Set setting '%s' = '%s'", key, value)

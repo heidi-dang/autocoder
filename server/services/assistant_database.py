@@ -7,9 +7,8 @@ Each project has its own assistant.db file in the project directory.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, create_engine, func
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
@@ -25,11 +24,12 @@ _engine_cache: dict[str, object] = {}
 
 def _utc_now() -> datetime:
     """Return current UTC time. Replacement for deprecated datetime.utcnow()."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Conversation(Base):
     """A conversation with the assistant for a project."""
+
     __tablename__ = "conversations"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -43,6 +43,7 @@ class Conversation(Base):
 
 class ConversationMessage(Base):
     """A single message within a conversation."""
+
     __tablename__ = "conversation_messages"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -90,7 +91,8 @@ def get_session(project_dir: Path):
 # Conversation Operations
 # ============================================================================
 
-def create_conversation(project_dir: Path, project_name: str, title: Optional[str] = None) -> Conversation:
+
+def create_conversation(project_dir: Path, project_name: str, title: str | None = None) -> Conversation:
     """Create a new conversation for a project."""
     session = get_session(project_dir)
     try:
@@ -117,8 +119,7 @@ def get_conversations(project_dir: Path, project_name: str) -> list[dict]:
         # Subquery to count messages per conversation (avoids N+1 query)
         message_count_subquery = (
             session.query(
-                ConversationMessage.conversation_id,
-                func.count(ConversationMessage.id).label("message_count")
+                ConversationMessage.conversation_id, func.count(ConversationMessage.id).label("message_count")
             )
             .group_by(ConversationMessage.conversation_id)
             .subquery()
@@ -126,14 +127,8 @@ def get_conversations(project_dir: Path, project_name: str) -> list[dict]:
 
         # Join conversation with message counts
         conversations = (
-            session.query(
-                Conversation,
-                func.coalesce(message_count_subquery.c.message_count, 0).label("message_count")
-            )
-            .outerjoin(
-                message_count_subquery,
-                Conversation.id == message_count_subquery.c.conversation_id
-            )
+            session.query(Conversation, func.coalesce(message_count_subquery.c.message_count, 0).label("message_count"))
+            .outerjoin(message_count_subquery, Conversation.id == message_count_subquery.c.conversation_id)
             .filter(Conversation.project_name == project_name)
             .order_by(Conversation.updated_at.desc())
             .all()
@@ -153,7 +148,7 @@ def get_conversations(project_dir: Path, project_name: str) -> list[dict]:
         session.close()
 
 
-def get_conversation(project_dir: Path, conversation_id: int) -> Optional[dict]:
+def get_conversation(project_dir: Path, conversation_id: int) -> dict | None:
     """Get a conversation with all its messages."""
     session = get_session(project_dir)
     try:
@@ -199,7 +194,8 @@ def delete_conversation(project_dir: Path, conversation_id: int) -> bool:
 # Message Operations
 # ============================================================================
 
-def add_message(project_dir: Path, conversation_id: int, role: str, content: str) -> Optional[dict]:
+
+def add_message(project_dir: Path, conversation_id: int, role: str, content: str) -> dict | None:
     """Add a message to a conversation."""
     session = get_session(project_dir)
     try:

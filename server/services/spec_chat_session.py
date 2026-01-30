@@ -11,9 +11,9 @@ import logging
 import os
 import shutil
 import threading
+from collections.abc import AsyncGenerator
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncGenerator, Optional
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from dotenv import load_dotenv
@@ -53,6 +53,7 @@ async def _make_multimodal_message(content_blocks: list[dict]) -> AsyncGenerator
         "session_id": "default",
     }
 
+
 # Root directory of the project
 ROOT_DIR = Path(__file__).parent.parent.parent
 
@@ -80,11 +81,11 @@ class SpecChatSession:
         """
         self.project_name = project_name
         self.project_dir = project_dir
-        self.client: Optional[ClaudeSDKClient] = None
+        self.client: ClaudeSDKClient | None = None
         self.messages: list[dict] = []
         self.complete: bool = False
         self.created_at = datetime.now()
-        self._conversation_id: Optional[str] = None
+        self._conversation_id: str | None = None
         self._client_entered: bool = False  # Track if context manager is active
 
     async def close(self) -> None:
@@ -108,10 +109,7 @@ class SpecChatSession:
         skill_path = ROOT_DIR / ".claude" / "commands" / "create-spec.md"
 
         if not skill_path.exists():
-            yield {
-                "type": "error",
-                "content": f"Spec creation skill not found at {skill_path}"
-            }
+            yield {"type": "error", "content": f"Spec creation skill not found at {skill_path}"}
             return
 
         try:
@@ -201,10 +199,7 @@ class SpecChatSession:
             self._client_entered = True
         except Exception as e:
             logger.exception("Failed to create Claude client")
-            yield {
-                "type": "error",
-                "content": f"Failed to initialize Claude: {str(e)}"
-            }
+            yield {"type": "error", "content": f"Failed to initialize Claude: {str(e)}"}
             return
 
         # Start the conversation - Claude will send the Phase 1 greeting
@@ -215,15 +210,10 @@ class SpecChatSession:
             yield {"type": "response_done"}
         except Exception as e:
             logger.exception("Failed to start spec chat")
-            yield {
-                "type": "error",
-                "content": f"Failed to start conversation: {str(e)}"
-            }
+            yield {"type": "error", "content": f"Failed to start conversation: {str(e)}"}
 
     async def send_message(
-        self,
-        user_message: str,
-        attachments: list[ImageAttachment] | None = None
+        self, user_message: str, attachments: list[ImageAttachment] | None = None
     ) -> AsyncGenerator[dict, None]:
         """
         Send user message and stream Claude's response.
@@ -240,19 +230,18 @@ class SpecChatSession:
             - {"type": "error", "content": str}
         """
         if not self.client:
-            yield {
-                "type": "error",
-                "content": "Session not initialized. Call start() first."
-            }
+            yield {"type": "error", "content": "Session not initialized. Call start() first."}
             return
 
         # Store the user message
-        self.messages.append({
-            "role": "user",
-            "content": user_message,
-            "has_attachments": bool(attachments),
-            "timestamp": datetime.now().isoformat()
-        })
+        self.messages.append(
+            {
+                "role": "user",
+                "content": user_message,
+                "has_attachments": bool(attachments),
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
         try:
             async for chunk in self._query_claude(user_message, attachments):
@@ -261,15 +250,10 @@ class SpecChatSession:
             yield {"type": "response_done"}
         except Exception as e:
             logger.exception("Error during Claude query")
-            yield {
-                "type": "error",
-                "content": f"Error: {str(e)}"
-            }
+            yield {"type": "error", "content": f"Error: {str(e)}"}
 
     async def _query_claude(
-        self,
-        message: str,
-        attachments: list[ImageAttachment] | None = None
+        self, message: str, attachments: list[ImageAttachment] | None = None
     ) -> AsyncGenerator[dict, None]:
         """
         Internal method to query Claude and stream responses.
@@ -297,14 +281,16 @@ class SpecChatSession:
 
             # Add image blocks
             for att in attachments:
-                content_blocks.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": att.mimeType,
-                        "data": att.base64Data,
+                content_blocks.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": att.mimeType,
+                            "data": att.base64Data,
+                        },
                     }
-                })
+                )
 
             # Send multimodal content to Claude using async generator format
             # The SDK's query() accepts AsyncIterable[dict] for custom message formats
@@ -318,8 +304,8 @@ class SpecChatSession:
 
         # Track pending writes for BOTH required files
         pending_writes = {
-            "app_spec": None,      # {"tool_id": ..., "path": ...}
-            "initializer": None,   # {"tool_id": ..., "path": ...}
+            "app_spec": None,  # {"tool_id": ..., "path": ...}
+            "initializer": None,  # {"tool_id": ..., "path": ...}
         }
 
         # Track which files have been successfully written
@@ -348,11 +334,9 @@ class SpecChatSession:
                             yield {"type": "text", "content": text}
 
                             # Store in message history
-                            self.messages.append({
-                                "role": "assistant",
-                                "content": text,
-                                "timestamp": datetime.now().isoformat()
-                            })
+                            self.messages.append(
+                                {"role": "assistant", "content": text, "timestamp": datetime.now().isoformat()}
+                            )
 
                     elif block_type == "ToolUseBlock" and hasattr(block, "name"):
                         tool_name = block.name
@@ -365,18 +349,12 @@ class SpecChatSession:
 
                             # Track app_spec.txt
                             if "app_spec.txt" in str(file_path):
-                                pending_writes["app_spec"] = {
-                                    "tool_id": tool_id,
-                                    "path": file_path
-                                }
+                                pending_writes["app_spec"] = {"tool_id": tool_id, "path": file_path}
                                 logger.info(f"{tool_name} tool called for app_spec.txt: {file_path}")
 
                             # Track initializer_prompt.md
                             elif "initializer_prompt.md" in str(file_path):
-                                pending_writes["initializer"] = {
-                                    "tool_id": tool_id,
-                                    "path": file_path
-                                }
+                                pending_writes["initializer"] = {"tool_id": tool_id, "path": file_path}
                                 logger.info(f"{tool_name} tool called for initializer_prompt.md: {file_path}")
 
             elif msg_type == "UserMessage" and hasattr(msg, "content"):
@@ -401,46 +379,45 @@ class SpecChatSession:
                             # Check app_spec.txt
                             if pending_writes["app_spec"] and tool_use_id == pending_writes["app_spec"].get("tool_id"):
                                 file_path = pending_writes["app_spec"]["path"]
-                                full_path = Path(file_path) if Path(file_path).is_absolute() else self.project_dir / file_path
+                                full_path = (
+                                    Path(file_path) if Path(file_path).is_absolute() else self.project_dir / file_path
+                                )
                                 if full_path.exists():
                                     logger.info(f"app_spec.txt verified at: {full_path}")
                                     files_written["app_spec"] = True
                                     spec_path = file_path
 
                                     # Notify about file write (but NOT completion yet)
-                                    yield {
-                                        "type": "file_written",
-                                        "path": str(file_path)
-                                    }
+                                    yield {"type": "file_written", "path": str(file_path)}
                                 else:
                                     logger.error(f"app_spec.txt not found after write: {full_path}")
                                 pending_writes["app_spec"] = None
 
                             # Check initializer_prompt.md
-                            if pending_writes["initializer"] and tool_use_id == pending_writes["initializer"].get("tool_id"):
+                            if pending_writes["initializer"] and tool_use_id == pending_writes["initializer"].get(
+                                "tool_id"
+                            ):
                                 file_path = pending_writes["initializer"]["path"]
-                                full_path = Path(file_path) if Path(file_path).is_absolute() else self.project_dir / file_path
+                                full_path = (
+                                    Path(file_path) if Path(file_path).is_absolute() else self.project_dir / file_path
+                                )
                                 if full_path.exists():
                                     logger.info(f"initializer_prompt.md verified at: {full_path}")
                                     files_written["initializer"] = True
 
                                     # Notify about file write
-                                    yield {
-                                        "type": "file_written",
-                                        "path": str(file_path)
-                                    }
+                                    yield {"type": "file_written", "path": str(file_path)}
                                 else:
                                     logger.error(f"initializer_prompt.md not found after write: {full_path}")
                                 pending_writes["initializer"] = None
 
                             # Check if BOTH files are now written - only then signal completion
                             if files_written["app_spec"] and files_written["initializer"]:
-                                logger.info("Both app_spec.txt and initializer_prompt.md verified - signaling completion")
+                                logger.info(
+                                    "Both app_spec.txt and initializer_prompt.md verified - signaling completion"
+                                )
                                 self.complete = True
-                                yield {
-                                    "type": "spec_complete",
-                                    "path": str(spec_path)
-                                }
+                                yield {"type": "spec_complete", "path": str(spec_path)}
 
     def is_complete(self) -> bool:
         """Check if spec creation is complete."""
@@ -456,7 +433,7 @@ _sessions: dict[str, SpecChatSession] = {}
 _sessions_lock = threading.Lock()
 
 
-def get_session(project_name: str) -> Optional[SpecChatSession]:
+def get_session(project_name: str) -> SpecChatSession | None:
     """Get an existing session for a project."""
     with _sessions_lock:
         return _sessions.get(project_name)
@@ -469,7 +446,7 @@ async def create_session(project_name: str, project_dir: Path) -> SpecChatSessio
         project_name: Name of the project
         project_dir: Absolute path to the project directory
     """
-    old_session: Optional[SpecChatSession] = None
+    old_session: SpecChatSession | None = None
 
     with _sessions_lock:
         # Get existing session to close later (outside the lock)
@@ -489,7 +466,7 @@ async def create_session(project_name: str, project_dir: Path) -> SpecChatSessio
 
 async def remove_session(project_name: str) -> None:
     """Remove and close a session."""
-    session: Optional[SpecChatSession] = None
+    session: SpecChatSession | None = None
 
     with _sessions_lock:
         session = _sessions.pop(project_name, None)

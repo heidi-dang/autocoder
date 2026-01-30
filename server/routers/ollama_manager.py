@@ -10,8 +10,6 @@ import logging
 import platform
 import shutil
 import subprocess
-from pathlib import Path
-from typing import Optional
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -26,7 +24,7 @@ router = APIRouter(prefix="/api/ollama", tags=["ollama-manager"])
 class OllamaStatus(BaseModel):
     installed: bool
     running: bool
-    version: Optional[str] = None
+    version: str | None = None
     base_url: str
     models_count: int
     models: list[dict] = Field(default_factory=list)
@@ -43,37 +41,27 @@ class ModelDownloadRequest(BaseModel):
     model_name: str
 
 
-def _check_ollama_installed() -> tuple[bool, Optional[str]]:
+def _check_ollama_installed() -> tuple[bool, str | None]:
     """Check if Ollama is installed on the system."""
     ollama_path = shutil.which("ollama")
     if not ollama_path:
         return False, None
-    
+
     try:
-        result = subprocess.run(
-            ["ollama", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
+        result = subprocess.run(["ollama", "--version"], capture_output=True, text=True, timeout=5)
         if result.returncode == 0:
             version = result.stdout.strip()
             return True, version
     except Exception as e:
         logger.error(f"Error checking Ollama version: {e}")
-    
+
     return True, "unknown"
 
 
 def _check_ollama_service() -> bool:
     """Check if Ollama service is running."""
     try:
-        result = subprocess.run(
-            ["systemctl", "is-active", "ollama"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
+        result = subprocess.run(["systemctl", "is-active", "ollama"], capture_output=True, text=True, timeout=5)
         return result.returncode == 0
     except Exception:
         # Fallback: try to connect to the API
@@ -104,7 +92,7 @@ def _get_system_info() -> dict:
 def _generate_install_script() -> str:
     """Generate installation script based on the OS."""
     system = platform.system()
-    
+
     if system == "Linux":
         return """#!/bin/bash
 # Ollama Installation Script for Linux
@@ -152,8 +140,8 @@ pause
 
 def _get_docker_connection_url() -> str:
     """Get the correct Ollama URL for Docker container to use."""
-    system = platform.system()
-    
+    platform.system()
+
     # For Linux, use host.docker.internal (requires extra_hosts in docker-compose)
     # For macOS/Windows, host.docker.internal works by default
     return "http://host.docker.internal:11434"
@@ -162,11 +150,11 @@ def _get_docker_connection_url() -> str:
 def _diagnose_connection_issues(status: OllamaStatus) -> list[str]:
     """Diagnose connection issues and provide recommendations."""
     recommendations = []
-    
+
     if not status.installed:
         recommendations.append("Ollama is not installed. Click 'Install Ollama' to set it up.")
         return recommendations
-    
+
     if not status.running:
         system = platform.system()
         if system == "Linux":
@@ -176,10 +164,10 @@ def _diagnose_connection_issues(status: OllamaStatus) -> list[str]:
         else:
             recommendations.append("Start Ollama: Open the Ollama app from your applications")
         return recommendations
-    
+
     if status.models_count == 0:
         recommendations.append("No models installed. Download a model first (e.g., 'ollama pull llama3.2')")
-    
+
     # Check Docker connectivity
     if "host.docker.internal" in status.connection_url:
         system = platform.system()
@@ -187,7 +175,7 @@ def _diagnose_connection_issues(status: OllamaStatus) -> list[str]:
             recommendations.append(
                 "On Linux, ensure docker-compose.yml has 'extra_hosts: host.docker.internal:host-gateway'"
             )
-    
+
     return recommendations
 
 
@@ -200,10 +188,10 @@ async def get_ollama_status():
     installed, version = _check_ollama_installed()
     base_url = get_ollama_base_url()
     connection_url = _get_docker_connection_url()
-    
+
     # Check if API is accessible
     api_accessible = await _check_ollama_api(base_url)
-    
+
     # Get models if accessible
     models = []
     if api_accessible:
@@ -211,7 +199,7 @@ async def get_ollama_status():
             models = await get_available_models()
         except Exception as e:
             logger.error(f"Error fetching models: {e}")
-    
+
     status = OllamaStatus(
         installed=installed,
         running=api_accessible,
@@ -221,9 +209,9 @@ async def get_ollama_status():
         models=models,
         connection_url=connection_url,
         issues=[],
-        recommendations=[]
+        recommendations=[],
     )
-    
+
     # Add issues
     if not installed:
         status.issues.append("Ollama is not installed on this system")
@@ -231,10 +219,10 @@ async def get_ollama_status():
         status.issues.append("Ollama is installed but not running or not accessible")
     elif len(models) == 0:
         status.issues.append("No models installed")
-    
+
     # Generate recommendations
     status.recommendations = _diagnose_connection_issues(status)
-    
+
     return status
 
 
@@ -245,7 +233,7 @@ async def get_install_script():
     """
     system_info = _get_system_info()
     script = _generate_install_script()
-    
+
     return {
         "system": system_info,
         "script": script,
@@ -256,7 +244,7 @@ async def get_install_script():
 def _get_install_instructions() -> list[str]:
     """Get step-by-step installation instructions."""
     system = platform.system()
-    
+
     if system == "Linux":
         return [
             "Open a terminal",
@@ -290,7 +278,7 @@ async def install_ollama(request: InstallRequest):
     For other platforms, provide instructions.
     """
     system = platform.system()
-    
+
     if not request.auto_install:
         return {
             "success": False,
@@ -298,7 +286,7 @@ async def install_ollama(request: InstallRequest):
             "script": _generate_install_script(),
             "instructions": _get_install_instructions(),
         }
-    
+
     if system != "Linux":
         return {
             "success": False,
@@ -306,7 +294,7 @@ async def install_ollama(request: InstallRequest):
             "instructions": _get_install_instructions(),
             "download_url": "https://ollama.com/download",
         }
-    
+
     # Auto-install on Linux
     try:
         # Download and run the install script
@@ -314,34 +302,28 @@ async def install_ollama(request: InstallRequest):
             ["curl", "-fsSL", "https://ollama.com/install.sh"],
             capture_output=True,
             text=True,
-            timeout=300  # 5 minutes timeout
+            timeout=300,  # 5 minutes timeout
         )
-        
+
         if result.returncode != 0:
             raise Exception(f"Download failed: {result.stderr}")
-        
+
         # Run the installer
-        install_result = subprocess.run(
-            ["sh"],
-            input=result.stdout,
-            capture_output=True,
-            text=True,
-            timeout=300
-        )
-        
+        install_result = subprocess.run(["sh"], input=result.stdout, capture_output=True, text=True, timeout=300)
+
         if install_result.returncode != 0:
             raise Exception(f"Installation failed: {install_result.stderr}")
-        
+
         # Start the service
         subprocess.run(["sudo", "systemctl", "start", "ollama"], check=True)
         subprocess.run(["sudo", "systemctl", "enable", "ollama"], check=True)
-        
+
         return {
             "success": True,
             "message": "Ollama installed successfully",
             "version": _check_ollama_installed()[1],
         }
-        
+
     except subprocess.TimeoutExpired:
         return {
             "success": False,
@@ -363,22 +345,20 @@ async def download_model(request: ModelDownloadRequest):
     Download an Ollama model.
     """
     installed, _ = _check_ollama_installed()
-    
+
     if not installed:
         raise HTTPException(status_code=400, detail="Ollama is not installed")
-    
+
     model_name = request.model_name
-    
+
     try:
         # Start the download process
         process = await asyncio.create_subprocess_exec(
-            "ollama", "pull", model_name,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            "ollama", "pull", model_name, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
-        
+
         stdout, stderr = await process.communicate()
-        
+
         if process.returncode == 0:
             return {
                 "success": True,
@@ -391,7 +371,7 @@ async def download_model(request: ModelDownloadRequest):
                 "message": f"Failed to download model '{model_name}'",
                 "error": stderr.decode(),
             }
-            
+
     except Exception as e:
         logger.error(f"Model download error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -403,37 +383,26 @@ async def start_ollama_service():
     Attempt to start Ollama service.
     """
     system = platform.system()
-    
+
     try:
         if system == "Linux":
             result = subprocess.run(
-                ["sudo", "systemctl", "start", "ollama"],
-                capture_output=True,
-                text=True,
-                timeout=10
+                ["sudo", "systemctl", "start", "ollama"], capture_output=True, text=True, timeout=10
             )
             if result.returncode == 0:
                 return {"success": True, "message": "Ollama service started"}
             else:
                 return {"success": False, "message": result.stderr}
-                
+
         elif system == "Darwin":
-            result = subprocess.run(
-                ["brew", "services", "start", "ollama"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            result = subprocess.run(["brew", "services", "start", "ollama"], capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
                 return {"success": True, "message": "Ollama service started"}
             else:
                 return {"success": False, "message": result.stderr}
         else:
-            return {
-                "success": False,
-                "message": "Please start Ollama manually from your applications"
-            }
-            
+            return {"success": False, "message": "Please start Ollama manually from your applications"}
+
     except Exception as e:
         logger.error(f"Start service error: {e}")
         return {"success": False, "message": str(e)}

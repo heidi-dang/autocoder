@@ -46,16 +46,16 @@ def load_prompt(name: str, project_dir: Path | None = None) -> str:
         if project_path.exists():
             try:
                 return project_path.read_text(encoding="utf-8")
-            except (OSError, PermissionError) as e:
-                print(f"Warning: Could not read {project_path}: {e}")
+            except (OSError, PermissionError):
+                pass
 
     # 2. Try base template
     template_path = TEMPLATES_DIR / f"{name}.template.md"
     if template_path.exists():
         try:
             return template_path.read_text(encoding="utf-8")
-        except (OSError, PermissionError) as e:
-            print(f"Warning: Could not read {template_path}: {e}")
+        except (OSError, PermissionError):
+            pass
 
     raise FileNotFoundError(
         f"Prompt '{name}' not found in:\n"
@@ -212,8 +212,8 @@ def scaffold_project_prompts(project_dir: Path) -> Path:
             try:
                 shutil.copy(template_path, dest_path)
                 copied_files.append(dest_name)
-            except (OSError, PermissionError) as e:
-                print(f"  Warning: Could not copy {dest_name}: {e}")
+            except (OSError, PermissionError):
+                pass
 
     # Copy allowed_commands.yaml template to .autocoder/
     examples_dir = Path(__file__).parent / "examples"
@@ -223,11 +223,11 @@ def scaffold_project_prompts(project_dir: Path) -> Path:
         try:
             shutil.copy(allowed_commands_template, allowed_commands_dest)
             copied_files.append(".autocoder/allowed_commands.yaml")
-        except (OSError, PermissionError) as e:
-            print(f"  Warning: Could not copy allowed_commands.yaml: {e}")
+        except (OSError, PermissionError):
+            pass
 
     if copied_files:
-        print(f"  Created project files: {', '.join(copied_files)}")
+        pass
 
     return project_prompts
 
@@ -293,10 +293,6 @@ def copy_spec_to_project(project_dir: Path) -> None:
     if project_spec.exists():
         try:
             shutil.copy(project_spec, spec_dest)
-            print("Copied app_spec.txt to project directory")
             return
-        except (OSError, PermissionError) as e:
-            print(f"Warning: Could not copy app_spec.txt: {e}")
+        except (OSError, PermissionError):
             return
-
-    print("Warning: No app_spec.txt found to copy to project directory")

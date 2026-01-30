@@ -9,9 +9,8 @@ Manages time-based start/stop of agents with crash recovery and manual override 
 import asyncio
 import logging
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -42,10 +41,8 @@ class SchedulerService:
     """
 
     def __init__(self):
-        from datetime import timezone as dt_timezone
-
         # CRITICAL: Use UTC timezone since all schedule times are stored in UTC
-        self.scheduler = AsyncIOScheduler(timezone=dt_timezone.utc)
+        self.scheduler = AsyncIOScheduler(timezone=UTC)
         self._started = False
 
     async def start(self):
@@ -101,10 +98,14 @@ class SchedulerService:
             _, SessionLocal = create_database(project_dir)
             db = SessionLocal()
             try:
-                schedules = db.query(Schedule).filter(
-                    Schedule.project_name == project_name,
-                    Schedule.enabled == True,  # noqa: E712
-                ).all()
+                schedules = (
+                    db.query(Schedule)
+                    .filter(
+                        Schedule.project_name == project_name,
+                        Schedule.enabled == True,  # noqa: E712
+                    )
+                    .all()
+                )
 
                 for schedule in schedules:
                     await self.add_schedule(project_name, schedule, project_dir)
@@ -140,7 +141,7 @@ class SchedulerService:
 
             # Start job - CRITICAL: timezone=timezone.utc is required for correct UTC scheduling
             start_job_id = f"schedule_{schedule.id}_start"
-            start_trigger = CronTrigger(hour=hour, minute=minute, day_of_week=days, timezone=timezone.utc)
+            start_trigger = CronTrigger(hour=hour, minute=minute, day_of_week=days, timezone=UTC)
             self.scheduler.add_job(
                 self._handle_scheduled_start,
                 start_trigger,
@@ -159,7 +160,7 @@ class SchedulerService:
             else:
                 stop_days = days
 
-            stop_trigger = CronTrigger(hour=end_hour, minute=end_minute, day_of_week=stop_days, timezone=timezone.utc)
+            stop_trigger = CronTrigger(hour=end_hour, minute=end_minute, day_of_week=stop_days, timezone=UTC)
             self.scheduler.add_job(
                 self._handle_scheduled_stop,
                 stop_trigger,
@@ -204,9 +205,7 @@ class SchedulerService:
         else:
             logger.warning(f"No jobs found to remove for schedule {schedule_id}")
 
-    async def _handle_scheduled_start(
-        self, project_name: str, schedule_id: int, project_dir_str: str
-    ):
+    async def _handle_scheduled_start(self, project_name: str, schedule_id: int, project_dir_str: str):
         """Handle scheduled agent start."""
         logger.info(f"Scheduled start triggered for {project_name} (schedule {schedule_id})")
         project_dir = Path(project_dir_str)
@@ -223,12 +222,16 @@ class SchedulerService:
                     return
 
                 # Check for manual stop override
-                now = datetime.now(timezone.utc)
-                override = db.query(ScheduleOverride).filter(
-                    ScheduleOverride.schedule_id == schedule_id,
-                    ScheduleOverride.override_type == "stop",
-                    ScheduleOverride.expires_at > now,
-                ).first()
+                now = datetime.now(UTC)
+                override = (
+                    db.query(ScheduleOverride)
+                    .filter(
+                        ScheduleOverride.schedule_id == schedule_id,
+                        ScheduleOverride.override_type == "stop",
+                        ScheduleOverride.expires_at > now,
+                    )
+                    .first()
+                )
 
                 if override:
                     logger.info(
@@ -250,9 +253,7 @@ class SchedulerService:
         except Exception as e:
             logger.error(f"Error in scheduled start for {project_name}: {e}")
 
-    async def _handle_scheduled_stop(
-        self, project_name: str, schedule_id: int, project_dir_str: str
-    ):
+    async def _handle_scheduled_stop(self, project_name: str, schedule_id: int, project_dir_str: str):
         """Handle scheduled agent stop."""
         logger.info(f"Scheduled stop triggered for {project_name} (schedule {schedule_id})")
         project_dir = Path(project_dir_str)
@@ -272,13 +273,12 @@ class SchedulerService:
                 # Check if other schedules are still active (latest stop wins)
                 if self._other_schedules_still_active(db, project_name, schedule_id):
                     logger.info(
-                        f"Skipping scheduled stop for {project_name}: "
-                        f"other schedules still active (latest stop wins)"
+                        f"Skipping scheduled stop for {project_name}: other schedules still active (latest stop wins)"
                     )
                     return
 
                 # Clear expired overrides for this schedule
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 db.query(ScheduleOverride).filter(
                     ScheduleOverride.schedule_id == schedule_id,
                     ScheduleOverride.expires_at <= now,
@@ -286,11 +286,15 @@ class SchedulerService:
                 db.commit()
 
                 # Check for active manual-start overrides that prevent auto-stop
-                active_start_override = db.query(ScheduleOverride).filter(
-                    ScheduleOverride.schedule_id == schedule_id,
-                    ScheduleOverride.override_type == "start",
-                    ScheduleOverride.expires_at > now,
-                ).first()
+                active_start_override = (
+                    db.query(ScheduleOverride)
+                    .filter(
+                        ScheduleOverride.schedule_id == schedule_id,
+                        ScheduleOverride.override_type == "start",
+                        ScheduleOverride.expires_at > now,
+                    )
+                    .first()
+                )
 
                 if active_start_override:
                     logger.info(
@@ -308,18 +312,20 @@ class SchedulerService:
         except Exception as e:
             logger.error(f"Error in scheduled stop for {project_name}: {e}")
 
-    def _other_schedules_still_active(
-        self, db, project_name: str, ending_schedule_id: int
-    ) -> bool:
+    def _other_schedules_still_active(self, db, project_name: str, ending_schedule_id: int) -> bool:
         """Check if any other schedule windows are still active."""
         from api.database import Schedule
 
-        now = datetime.now(timezone.utc)
-        schedules = db.query(Schedule).filter(
-            Schedule.project_name == project_name,
-            Schedule.enabled == True,  # noqa: E712
-            Schedule.id != ending_schedule_id,
-        ).all()
+        now = datetime.now(UTC)
+        schedules = (
+            db.query(Schedule)
+            .filter(
+                Schedule.project_name == project_name,
+                Schedule.enabled == True,  # noqa: E712
+                Schedule.id != ending_schedule_id,
+            )
+            .all()
+        )
 
         for schedule in schedules:
             if self._is_within_window(schedule, now):
@@ -420,11 +426,15 @@ class SchedulerService:
         db = SessionLocal()
 
         try:
-            now = datetime.now(timezone.utc)
-            schedules = db.query(Schedule).filter(
-                Schedule.project_name == project_name,
-                Schedule.enabled == True,  # noqa: E712
-            ).all()
+            now = datetime.now(UTC)
+            schedules = (
+                db.query(Schedule)
+                .filter(
+                    Schedule.project_name == project_name,
+                    Schedule.enabled == True,  # noqa: E712
+                )
+                .all()
+            )
 
             for schedule in schedules:
                 if not self._is_within_window(schedule, now):
@@ -432,8 +442,7 @@ class SchedulerService:
 
                 if schedule.crash_count >= MAX_CRASH_RETRIES:
                     logger.warning(
-                        f"Max crash retries ({MAX_CRASH_RETRIES}) reached for "
-                        f"schedule {schedule.id} on {project_name}"
+                        f"Max crash retries ({MAX_CRASH_RETRIES}) reached for schedule {schedule.id} on {project_name}"
                     )
                     continue
 
@@ -442,10 +451,7 @@ class SchedulerService:
 
                 # Exponential backoff: 10s, 30s, 90s
                 delay = CRASH_BACKOFF_BASE * (3 ** (schedule.crash_count - 1))
-                logger.info(
-                    f"Restarting agent for {project_name} in {delay}s "
-                    f"(attempt {schedule.crash_count})"
-                )
+                logger.info(f"Restarting agent for {project_name} in {delay}s (attempt {schedule.crash_count})")
 
                 await asyncio.sleep(delay)
                 await self._start_agent(project_name, project_dir, schedule)
@@ -464,9 +470,7 @@ class SchedulerService:
         logger.info(f"Manual stop detected for {project_name}, creating override to prevent auto-start")
         self._create_override_for_active_schedules(project_name, project_dir, "stop")
 
-    def _create_override_for_active_schedules(
-        self, project_name: str, project_dir: Path, override_type: str
-    ):
+    def _create_override_for_active_schedules(self, project_name: str, project_dir: Path, override_type: str):
         """Create overrides for all active schedule windows.
 
         Uses atomic delete-then-create pattern to prevent race conditions.
@@ -478,11 +482,15 @@ class SchedulerService:
             db = SessionLocal()
 
             try:
-                now = datetime.now(timezone.utc)
-                schedules = db.query(Schedule).filter(
-                    Schedule.project_name == project_name,
-                    Schedule.enabled == True,  # noqa: E712
-                ).all()
+                now = datetime.now(UTC)
+                schedules = (
+                    db.query(Schedule)
+                    .filter(
+                        Schedule.project_name == project_name,
+                        Schedule.enabled == True,  # noqa: E712
+                    )
+                    .all()
+                )
 
                 overrides_created = 0
                 for schedule in schedules:
@@ -494,15 +502,18 @@ class SchedulerService:
 
                     # Atomic operation: delete any existing overrides of this type
                     # and create a new one in the same transaction
-                    deleted = db.query(ScheduleOverride).filter(
-                        ScheduleOverride.schedule_id == schedule.id,
-                        ScheduleOverride.override_type == override_type,
-                    ).delete()
+                    deleted = (
+                        db.query(ScheduleOverride)
+                        .filter(
+                            ScheduleOverride.schedule_id == schedule.id,
+                            ScheduleOverride.override_type == override_type,
+                        )
+                        .delete()
+                    )
 
                     if deleted:
                         logger.debug(
-                            f"Removed {deleted} existing '{override_type}' override(s) "
-                            f"for schedule {schedule.id}"
+                            f"Removed {deleted} existing '{override_type}' override(s) for schedule {schedule.id}"
                         )
 
                     # Create new override
@@ -514,8 +525,7 @@ class SchedulerService:
                     db.add(override)
                     overrides_created += 1
                     logger.info(
-                        f"Created '{override_type}' override for schedule {schedule.id} "
-                        f"(expires at {window_end})"
+                        f"Created '{override_type}' override for schedule {schedule.id} (expires at {window_end})"
                     )
 
                 db.commit()
@@ -533,9 +543,7 @@ class SchedulerService:
         start_hour, start_minute = map(int, schedule.start_time.split(":"))
 
         # Create start time for today
-        window_start = now.replace(
-            hour=start_hour, minute=start_minute, second=0, microsecond=0
-        )
+        window_start = now.replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
 
         # If current time is before start time, the window started yesterday
         if now.replace(tzinfo=None) < window_start.replace(tzinfo=None):
@@ -549,7 +557,7 @@ class SchedulerService:
         from registry import list_registered_projects
 
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             projects = list_registered_projects()
 
             for project_name, info in projects.items():
@@ -562,9 +570,7 @@ class SchedulerService:
         except Exception as e:
             logger.error(f"Error checking missed windows on startup: {e}")
 
-    async def _check_project_on_startup(
-        self, project_name: str, project_dir: Path, now: datetime
-    ):
+    async def _check_project_on_startup(self, project_name: str, project_dir: Path, now: datetime):
         """Check if a project should be started on server startup."""
         from api.database import Schedule, ScheduleOverride, create_database
 
@@ -577,34 +583,36 @@ class SchedulerService:
             db = SessionLocal()
 
             try:
-                schedules = db.query(Schedule).filter(
-                    Schedule.project_name == project_name,
-                    Schedule.enabled == True,  # noqa: E712
-                ).all()
+                schedules = (
+                    db.query(Schedule)
+                    .filter(
+                        Schedule.project_name == project_name,
+                        Schedule.enabled == True,  # noqa: E712
+                    )
+                    .all()
+                )
 
                 for schedule in schedules:
                     if not self._is_within_window(schedule, now):
                         continue
 
                     # Check for manual stop override
-                    override = db.query(ScheduleOverride).filter(
-                        ScheduleOverride.schedule_id == schedule.id,
-                        ScheduleOverride.override_type == "stop",
-                        ScheduleOverride.expires_at > now,
-                    ).first()
+                    override = (
+                        db.query(ScheduleOverride)
+                        .filter(
+                            ScheduleOverride.schedule_id == schedule.id,
+                            ScheduleOverride.override_type == "stop",
+                            ScheduleOverride.expires_at > now,
+                        )
+                        .first()
+                    )
 
                     if override:
-                        logger.info(
-                            f"Skipping startup start for {project_name}: "
-                            f"manual stop override active"
-                        )
+                        logger.info(f"Skipping startup start for {project_name}: manual stop override active")
                         continue
 
                     # Start the agent
-                    logger.info(
-                        f"Starting {project_name} for active schedule {schedule.id} "
-                        f"(server startup)"
-                    )
+                    logger.info(f"Starting {project_name} for active schedule {schedule.id} (server startup)")
                     await self._start_agent(project_name, project_dir, schedule)
                     return  # Only start once per project
 
@@ -627,11 +635,11 @@ class SchedulerService:
         shifted = 0
         # Shift each day forward, wrapping Sunday to Monday
         if bitfield & 1:
-            shifted |= 2   # Mon -> Tue
+            shifted |= 2  # Mon -> Tue
         if bitfield & 2:
-            shifted |= 4   # Tue -> Wed
+            shifted |= 4  # Tue -> Wed
         if bitfield & 4:
-            shifted |= 8   # Wed -> Thu
+            shifted |= 8  # Wed -> Thu
         if bitfield & 8:
             shifted |= 16  # Thu -> Fri
         if bitfield & 16:
@@ -639,7 +647,7 @@ class SchedulerService:
         if bitfield & 32:
             shifted |= 64  # Sat -> Sun
         if bitfield & 64:
-            shifted |= 1   # Sun -> Mon
+            shifted |= 1  # Sun -> Mon
         return shifted
 
     @staticmethod
@@ -662,7 +670,7 @@ class SchedulerService:
 
 
 # Global scheduler instance
-_scheduler: Optional[SchedulerService] = None
+_scheduler: SchedulerService | None = None
 
 
 def get_scheduler() -> SchedulerService:

@@ -58,11 +58,7 @@ def resolve_dependencies(features: list[dict]) -> DependencyResult:
 
     # Kahn's algorithm with priority-aware selection using a heap
     # Heap entries are tuples: (priority, id, feature_dict) for stable ordering
-    heap = [
-        (f.get("priority", 999), f["id"], f)
-        for f in features
-        if in_degree[f["id"]] == 0
-    ]
+    heap = [(f.get("priority", 999), f["id"], f) for f in features if in_degree[f["id"]] == 0]
     heapq.heapify(heap)
     ordered: list[dict] = []
 
@@ -73,10 +69,7 @@ def resolve_dependencies(features: list[dict]) -> DependencyResult:
             in_degree[dependent_id] -= 1
             if in_degree[dependent_id] == 0:
                 dep_feature = feature_map[dependent_id]
-                heapq.heappush(
-                    heap,
-                    (dep_feature.get("priority", 999), dependent_id, dep_feature)
-                )
+                heapq.heappush(heap, (dep_feature.get("priority", 999), dependent_id, dep_feature))
 
     # Detect cycles (features not in ordered = part of cycle)
     cycles: list[list[int]] = []
@@ -141,9 +134,7 @@ def get_blocking_dependencies(
     return [dep_id for dep_id in deps if dep_id not in passing_ids]
 
 
-def would_create_circular_dependency(
-    features: list[dict], source_id: int, target_id: int
-) -> bool:
+def would_create_circular_dependency(features: list[dict], source_id: int, target_id: int) -> bool:
     """Check if adding a dependency from target to source would create a cycle.
 
     Uses DFS with visited set for efficient cycle detection.
@@ -195,9 +186,7 @@ def would_create_circular_dependency(
     return can_reach(target_id)
 
 
-def validate_dependencies(
-    feature_id: int, dependency_ids: list[int], all_feature_ids: set[int]
-) -> tuple[bool, str]:
+def validate_dependencies(feature_id: int, dependency_ids: list[int], all_feature_ids: set[int]) -> tuple[bool, str]:
     """Validate dependency list.
 
     Args:
@@ -291,10 +280,10 @@ def compute_scheduling_scores(features: list[dict]) -> dict[int, float]:
 
     # Build adjacency lists
     children: dict[int, list[int]] = {f["id"]: [] for f in features}  # who depends on me
-    parents: dict[int, list[int]] = {f["id"]: [] for f in features}   # who I depend on
+    parents: dict[int, list[int]] = {f["id"]: [] for f in features}  # who I depend on
 
     for f in features:
-        for dep_id in (f.get("dependencies") or []):
+        for dep_id in f.get("dependencies") or []:
             if dep_id in children:  # Only valid deps
                 children[dep_id].append(f["id"])
                 parents[f["id"]].append(dep_id)
@@ -427,14 +416,16 @@ def build_graph_data(features: list[dict]) -> dict:
         else:
             status = "pending"
 
-        nodes.append({
-            "id": f["id"],
-            "name": f["name"],
-            "category": f["category"],
-            "status": status,
-            "priority": f.get("priority", 999),
-            "dependencies": deps,
-        })
+        nodes.append(
+            {
+                "id": f["id"],
+                "name": f["name"],
+                "category": f["category"],
+                "status": status,
+                "priority": f.get("priority", 999),
+                "dependencies": deps,
+            }
+        )
 
         for dep_id in deps:
             edges.append({"source": dep_id, "target": f["id"]})
