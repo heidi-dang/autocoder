@@ -1,4 +1,4 @@
-import { Loader2, AlertCircle, Check, Moon, Sun, Server, Cloud, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, Check, Moon, Sun, Server, Cloud, RefreshCw, Wrench } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   useSettings,
@@ -7,6 +7,7 @@ import {
 } from "../hooks/useProjects";
 import { useTheme, THEMES } from "../hooks/useTheme";
 import { getOllamaModels, testOllamaConnection } from "../lib/api";
+import { OllamaSetupWizard } from "./OllamaSetupWizard";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +43,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [ollamaTestResult, setOllamaTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [localOllamaUrl, setLocalOllamaUrl] = useState("");
   const [localGeminiKey, setLocalGeminiKey] = useState("");
+  const [showOllamaWizard, setShowOllamaWizard] = useState(false);
 
   // Sync local state with settings
   useEffect(() => {
@@ -250,6 +252,18 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   )}
                 </button>
               </div>
+              
+              {/* Ollama Setup Wizard Button */}
+              {settings.ai_provider === "local" && (
+                <Button
+                  onClick={() => setShowOllamaWizard(true)}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <Wrench className="h-4 w-4 mr-2" />
+                  Setup Ollama Assistant
+                </Button>
+              )}
             </div>
 
             {/* Ollama Configuration */}
@@ -490,6 +504,22 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
         )}
       </DialogContent>
+
+      {/* Ollama Setup Wizard Dialog */}
+      <Dialog open={showOllamaWizard} onOpenChange={setShowOllamaWizard}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Ollama Setup Assistant</DialogTitle>
+          </DialogHeader>
+          <OllamaSetupWizard 
+            onComplete={() => {
+              setShowOllamaWizard(false);
+              refetch(); // Reload settings
+              loadOllamaModels(); // Reload models
+            }} 
+          />
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

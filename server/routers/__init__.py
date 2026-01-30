@@ -11,6 +11,7 @@ from .devserver import router as devserver_router
 from .expand_project import router as expand_project_router
 from .features import router as features_router
 from .filesystem import router as filesystem_router
+from .ollama_manager import router as ollama_manager_router
 from .projects import router as projects_router
 from .sandbox import router as sandbox_router
 from .schedules import router as schedules_router
@@ -28,6 +29,11 @@ __all__ = [
     "expand_project_router",
     "filesystem_router",
     "assistant_chat_router",
+    "settings_router",
+    "terminal_router",
+    "sandbox_router",
+    "ollama_manager_router",
+]
     "settings_router",
     "terminal_router",
     "sandbox_router",

@@ -49,6 +49,7 @@ from .routers import (
     expand_project_router,
     features_router,
     filesystem_router,
+    ollama_manager_router,
     projects_router,
     sandbox_router,
     schedules_router,
@@ -320,6 +321,7 @@ app.include_router(assistant_chat_router)
 app.include_router(settings_router)
 app.include_router(terminal_router)
 app.include_router(sandbox_router)
+app.include_router(ollama_manager_router)
 
 
 # ============================================================================

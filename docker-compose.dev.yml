@@ -13,6 +13,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock  # For sandbox management
     ports:
       - "8888:8888"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Allow container to reach host on Linux
     depends_on:
       - ui
 
