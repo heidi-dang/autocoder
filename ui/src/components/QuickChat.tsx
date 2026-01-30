@@ -51,12 +51,24 @@ export function QuickChat({ onClose }: QuickChatProps) {
     const fetchModels = async () => {
       try {
         const response = await fetch("/api/settings/ollama-models");
-        const data = await response.json();
+        if (!response.ok) {
+          console.warn(`Failed to fetch models: ${response.status}`);
+          return;
+        }
+
+        const text = await response.text();
+        if (!text) {
+          console.warn("Empty response from models endpoint");
+          return;
+        }
+
+        const data = JSON.parse(text);
         if (data.models && Array.isArray(data.models)) {
           setAvailableModels(data.models.map((m: { name: string }) => m.name));
         }
       } catch (error) {
-        console.error("Failed to fetch models:", error);
+        console.warn("Failed to fetch models:", error instanceof Error ? error.message : String(error));
+        // Silently fail - models section won't be shown
       }
     };
     fetchModels();
@@ -134,9 +146,18 @@ export function QuickChat({ onClose }: QuickChatProps) {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to get response");
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(
+          `Server error (${response.status}): ${errorBody || response.statusText}`
+        );
+      }
 
       const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body received");
+      }
+
       const decoder = new TextDecoder();
       let assistantMessage = "";
 
@@ -149,26 +170,24 @@ export function QuickChat({ onClose }: QuickChatProps) {
         },
       ]);
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-          const chunk = decoder.decode(value);
-          assistantMessage += chunk;
+        const chunk = decoder.decode(value);
+        assistantMessage += chunk;
 
-          setMessages((prev) => {
-            const updated = [...prev];
-            if (updated[updated.length - 1]) {
-              updated[updated.length - 1] = {
-                role: "assistant",
-                content: assistantMessage,
-                metadata: { mode: aiMode },
-              };
-            }
-            return updated;
-          });
-        }
+        setMessages((prev) => {
+          const updated = [...prev];
+          if (updated[updated.length - 1]) {
+            updated[updated.length - 1] = {
+              role: "assistant",
+              content: assistantMessage,
+              metadata: { mode: aiMode },
+            };
+          }
+          return updated;
+        });
       }
     } catch (error) {
       console.error("Chat error:", error);
@@ -178,7 +197,7 @@ export function QuickChat({ onClose }: QuickChatProps) {
           role: "assistant",
           content: `❌ Error: ${
             error instanceof Error ? error.message : "Unknown error occurred"
-          }`,
+          }\n\nNote: The quick chat feature requires a backend API. Make sure the server is running.`,
         },
       ]);
     } finally {
@@ -194,9 +213,9 @@ export function QuickChat({ onClose }: QuickChatProps) {
             <MessageSquare size={20} />
           </div>
           <div>
-            <CardTitle className="text-lg">AI Control Center</CardTitle>
+            <CardTitle className="text-lg">Get Started</CardTitle>
             <p className="text-xs text-slate-300 mt-1">
-              Chat with AI, control mode, choose model, create tasks
+              Create your first project to unlock full AI capabilities
             </p>
           </div>
         </div>
@@ -311,23 +330,17 @@ export function QuickChat({ onClose }: QuickChatProps) {
                 <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
                   <MessageSquare size={32} className="opacity-50" />
                 </div>
-                <p className="text-sm font-medium">Welcome to AI Control Center</p>
+                <p className="text-sm font-medium">Welcome to Quick Chat</p>
                 <p className="text-xs mt-2 max-w-xs">
-                  Select your AI mode, choose a model, and start chatting. Use commands
-                  like /task to create tasks directly.
+                  Create a project to get started with full AI capabilities including
+                  assistant chat, agent orchestration, and more.
                 </p>
                 <div className="mt-4 space-y-2 text-left text-xs">
-                  <p className="font-semibold">Available commands:</p>
+                  <p className="font-semibold text-slate-600 dark:text-slate-300">Next steps:</p>
                   <div className="space-y-1">
-                    <p>
-                      <Badge className="mr-2">/task</Badge> Create AI task
-                    </p>
-                    <p>
-                      <Badge className="mr-2">/debug</Badge> Debug code
-                    </p>
-                    <p>
-                      <Badge className="mr-2">/analyze</Badge> Analyze code
-                    </p>
+                    <p>1. Select a project from the sidebar</p>
+                    <p>2. Use the assistant panel (press <kbd>A</kbd>)</p>
+                    <p>3. Chat with AI, manage features, run agents</p>
                   </div>
                 </div>
               </div>
@@ -383,45 +396,22 @@ export function QuickChat({ onClose }: QuickChatProps) {
           </div>
         </ScrollArea>
 
-        {/* Input Form */}
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="flex gap-2 items-end">
-            <div className="flex-1 space-y-2">
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
-                Message
-              </label>
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message or use /task, /debug, /analyze..."
-                className="resize-none text-sm"
-                rows={2}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-                disabled={isLoading}
-              />
+        {/* Getting Started Info */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4 space-y-3">
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-2">
+                Ready to get started?
+              </h4>
+              <ol className="text-xs space-y-2 text-slate-700 dark:text-slate-300 list-decimal list-inside">
+                <li>Use the sidebar menu to select or create a project</li>
+                <li>Once selected, you'll see your project's features</li>
+                <li>Press <kbd className="bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded text-xs font-mono">A</kbd> to open the AI assistant</li>
+                <li>Chat with AI, manage features, and run agents</li>
+              </ol>
             </div>
-            <Button
-              type="submit"
-              disabled={!input.trim() || isLoading}
-              size="lg"
-              className="shrink-0 h-auto px-6 rounded-lg bg-blue-500 hover:bg-blue-600"
-            >
-              {isLoading ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : (
-                <Send size={18} />
-              )}
-            </Button>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Shift + Enter for new line • Enter to send
-          </p>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );
