@@ -88,4 +88,5 @@ function TabsContent({
 
 TabsContent.displayName = "TabsContent";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };

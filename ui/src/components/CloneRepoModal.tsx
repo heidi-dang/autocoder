@@ -26,7 +26,6 @@ export function CloneRepoModal({ isOpen, onClose, projectName }: CloneRepoModalP
   const [targetDir, setTargetDir] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isCloning, setIsCloning] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -111,18 +110,11 @@ export function CloneRepoModal({ isOpen, onClose, projectName }: CloneRepoModalP
           )}
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isCloning}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Close
             </Button>
-            <Button type="submit" disabled={isCloning || !projectName}>
-              {isCloning ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 size={16} className="animate-spin" />
-                  Cloning...
-                </span>
-              ) : (
-                "Clone"
-              )}
+            <Button type="submit" disabled={!projectName}>
+              Clone
             </Button>
           </DialogFooter>
         </form>
