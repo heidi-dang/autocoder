@@ -54,12 +54,12 @@ class DebugLogger:
         with self._lock:
             self._session_started = True
             with open(self.log_file, "w") as f:
-                f.write(f"=== Orchestrator Debug Log Started: {datetime.now().isoformat()} ===\n")
+                f.write(f"=== Orchestrator Debug Log Started: {datetime.now(UTC).isoformat()} ===\n")
                 f.write(f"=== PID: {os.getpid()} ===\n\n")
 
     def log(self, category: str, message: str, **kwargs):
         """Write a timestamped log entry."""
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        timestamp = datetime.now(UTC).strftime("%H:%M:%S.%f")[:-3]
         with self._lock:
             with open(self.log_file, "a") as f:
                 f.write(f"[{timestamp}] [{category}] {message}\n")
@@ -184,7 +184,7 @@ class ParallelOrchestrator:
         self._failure_counts: dict[int, int] = {}
 
         # Session tracking for logging/debugging
-        self.session_start_time: datetime = None
+        self.session_start_time: datetime = datetime.now(UTC)
 
         # Event signaled when any agent completes, allowing the main loop to wake
         # immediately instead of waiting for the full POLL_INTERVAL timeout.
