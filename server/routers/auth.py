@@ -282,7 +282,7 @@ def _upsert_user_and_provider(
                     "updated_at": now,
                 },
             )
-            user_id = int(session.execute(text("SELECT last_insert_rowid()"))).fetchone()[0]
+            user_id = session.execute(text("SELECT last_insert_rowid()")).fetchone()[0]
         else:
             session.execute(
                 text(
@@ -539,8 +539,15 @@ async def _google_decode_and_validate_id_token(id_token: str) -> dict[str, Any]:
 
 
 def _frontend_redirect(next_path: str | None) -> str:
+    """Safely redirect to frontend with Open Redirect protection."""
     frontend = _require_env("FRONTEND_URL").rstrip("/") + "/"
     path = (next_path or "/").lstrip("/")
+    
+    # Prevent Open Redirect attacks: ensure path is relative
+    if path.startswith(("/", "//")) or "://" in path:
+        # If absolute URL provided, sanitize to just the path component
+        path = "/"
+    
     return urljoin(frontend, path)
 
 
@@ -771,8 +778,9 @@ async def logout(request: Request):
     if token:
         try:
             _revoke_refresh_token(token)
-        except Exception:
-            pass
+        except Exception as e:
+            # Log but don't fail - token revocation failure shouldn't prevent logout
+            print(f"WARNING: Failed to revoke refresh token on logout: {e}")
 
     response = Response(content=json.dumps({"ok": True}), media_type="application/json")
     _clear_auth_cookies(response)
