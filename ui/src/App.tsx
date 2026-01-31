@@ -461,6 +461,17 @@ function App() {
                 <Box size={16} className="mr-2" />
                 Workspace
               </Button>
+              
+              <Button
+                onClick={() => setShowSettings(true)}
+                variant="outline"
+                size="sm"
+                title="Settings (,)"
+                aria-label="Open Settings"
+              >
+                <Settings size={18} />
+              </Button>
+              
               <ProjectSelector
                 projects={projects ?? []}
                 selectedProject={selectedProject}
@@ -484,16 +495,6 @@ function App() {
                   />
 
                   <DesignWithAIModal />
-
-                  <Button
-                    onClick={() => setShowSettings(true)}
-                    variant="outline"
-                    size="sm"
-                    title="Settings (,)"
-                    aria-label="Open Settings"
-                  >
-                    <Settings size={18} />
-                  </Button>
 
                   <Button
                     onClick={() => setShowSandboxSettings(true)}
