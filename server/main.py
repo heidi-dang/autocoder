@@ -142,17 +142,24 @@ def configure_tracing(app: FastAPI):
 # Metrics
 # -----------------------------------------------------------------------------
 
-REQUEST_COUNTER = Counter(
-    "http_requests_total",
-    "Total HTTP requests",
-    ["method", "path", "status"],
-)
-REQUEST_LATENCY = Histogram(
-    "http_request_duration_seconds",
-    "HTTP request latency",
-    ["method", "path"],
-    buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10),
-)
+# Use try-except to handle reloader duplicate registration
+try:
+    REQUEST_COUNTER = Counter(
+        "http_requests_total",
+        "Total HTTP requests",
+        ["method", "path", "status"],
+    )
+    REQUEST_LATENCY = Histogram(
+        "http_request_duration_seconds",
+        "HTTP request latency",
+        ["method", "path"],
+        buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10),
+    )
+except ValueError:
+    # Metrics already registered (happens during reloader)
+    from prometheus_client import REGISTRY
+    REQUEST_COUNTER = REGISTRY._names_to_collectors.get("http_requests_total")
+    REQUEST_LATENCY = REGISTRY._names_to_collectors.get("http_request_duration_seconds")
 
 
 METRICS_ENABLED = os.environ.get("AUTOCODER_ENABLE_METRICS", "").lower() in ("1", "true", "yes")

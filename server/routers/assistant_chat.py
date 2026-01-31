@@ -371,7 +371,7 @@ async def quick_chat(request: QuickChatRequest):
     from registry import get_all_settings
 
     settings = get_all_settings()
-    # Default to local (Ollama) if no provider is configured or explicitly set to local
+    # Default to local (Ollama) if no provider is configured
     ai_provider = settings.get("ai_provider") or "local"
 
     # Build the message with mode/command context
