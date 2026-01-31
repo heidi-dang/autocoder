@@ -16,6 +16,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -30,6 +31,7 @@ from sqlalchemy import text
 import registry
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 ACCESS_COOKIE_NAME = "access_token"
@@ -780,7 +782,7 @@ async def logout(request: Request):
             _revoke_refresh_token(token)
         except Exception as e:
             # Log but don't fail - token revocation failure shouldn't prevent logout
-            print(f"WARNING: Failed to revoke refresh token on logout: {e}")
+            logger.warning("Failed to revoke refresh token on logout: %s", e)
 
     response = Response(content=json.dumps({"ok": True}), media_type="application/json")
     _clear_auth_cookies(response)

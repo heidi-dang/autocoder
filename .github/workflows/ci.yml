@@ -3,8 +3,6 @@ name: Push CI
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   repo-guards:
@@ -37,6 +35,8 @@ jobs:
     - uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+        cache: pip
+        cache-dependency-path: requirements.txt
     - name: Install dependencies
       run: pip install -r requirements.txt
     - name: Lint with ruff

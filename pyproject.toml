@@ -13,6 +13,13 @@ ignore = [
     "BLE001",  # Do not catch blind exception (common in async code)
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# CLI tools and test files can use print() for user output
+"start*.py" = ["T201"]
+"test_*.py" = ["T201"]
+"client.py" = ["T201"]  # User-facing configuration messages
+"parallel_orchestrator.py" = ["T201"]  # User-facing orchestrator output
+
 [tool.ruff.lint.isort]
 known-first-party = ["server", "api", "mcp_server"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]

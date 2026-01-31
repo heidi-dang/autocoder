@@ -23,9 +23,10 @@ import os
 import subprocess
 import sys
 import threading
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Literal
 
 from api.database import Feature, create_database
 from api.dependency_resolver import are_dependencies_satisfied, compute_scheduling_scores
@@ -688,7 +689,7 @@ class ParallelOrchestrator:
 
             await asyncio.wait_for(stream_output(), timeout=INITIALIZER_TIMEOUT)
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             print(f"ERROR: Initializer timed out after {INITIALIZER_TIMEOUT // 60} minutes", flush=True)
             debug_log.log("INIT", "TIMEOUT - Initializer exceeded time limit",
                 timeout_minutes=INITIALIZER_TIMEOUT // 60)
@@ -777,7 +778,7 @@ class ParallelOrchestrator:
             # Event was set - an agent completed. Clear it for the next wait cycle.
             self._agent_completed_event.clear()
             debug_log.log("EVENT", "Woke up immediately - agent completed")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Timeout reached without agent completion - this is normal, just check anyway
             pass
 
@@ -923,7 +924,7 @@ class ParallelOrchestrator:
         self._event_loop = asyncio.get_running_loop()
 
         # Track session start for regression testing (UTC for consistency with last_tested_at)
-        self.session_start_time = datetime.now(timezone.utc)
+        self.session_start_time = datetime.now(UTC)
 
         # Start debug logging session FIRST (clears previous logs)
         # Must happen before any debug_log.log() calls

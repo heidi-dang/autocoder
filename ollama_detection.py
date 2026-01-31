@@ -8,17 +8,15 @@ and returns the active instance URL.
 This is useful when Ollama is auto-started by the system on different ports.
 """
 
-import httpx
 import os
-import socket
-from typing import Optional
 
+import httpx
 
 # Common Ollama ports (default is 11434, but can run on others)
 COMMON_OLLAMA_PORTS = [11434, 36199, 11435, 8000, 8080, 5000]
 
 
-def detect_ollama_url() -> Optional[str]:
+def detect_ollama_url() -> str | None:
     """
     Automatically detect running Ollama instance.
     
@@ -81,7 +79,7 @@ def _test_ollama_connection(url: str, timeout: float = 1.0) -> bool:
         return False
 
 
-def get_ollama_url_sync() -> Optional[str]:
+def get_ollama_url_sync() -> str | None:
     """
     Synchronous Ollama detection.
     Use this in non-async contexts.

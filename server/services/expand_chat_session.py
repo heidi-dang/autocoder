@@ -14,9 +14,9 @@ import shutil
 import sys
 import threading
 import uuid
+from collections.abc import AsyncGenerator
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncGenerator, Optional
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from dotenv import load_dotenv
@@ -82,15 +82,15 @@ class ExpandChatSession:
         """
         self.project_name = project_name
         self.project_dir = project_dir
-        self.client: Optional[ClaudeSDKClient] = None
+        self.client: ClaudeSDKClient | None = None
         self.messages: list[dict] = []
         self.complete: bool = False
         self.created_at = datetime.now()
-        self._conversation_id: Optional[str] = None
+        self._conversation_id: str | None = None
         self._client_entered: bool = False
         self.features_created: int = 0
         self.created_feature_ids: list[int] = []
-        self._settings_file: Optional[Path] = None
+        self._settings_file: Path | None = None
         self._query_lock = asyncio.Lock()
 
     async def close(self) -> None:
@@ -353,7 +353,7 @@ _expand_sessions: dict[str, ExpandChatSession] = {}
 _expand_sessions_lock = threading.Lock()
 
 
-def get_expand_session(project_name: str) -> Optional[ExpandChatSession]:
+def get_expand_session(project_name: str) -> ExpandChatSession | None:
     """Get an existing expansion session for a project."""
     with _expand_sessions_lock:
         return _expand_sessions.get(project_name)
@@ -361,7 +361,7 @@ def get_expand_session(project_name: str) -> Optional[ExpandChatSession]:
 
 async def create_expand_session(project_name: str, project_dir: Path) -> ExpandChatSession:
     """Create a new expansion session for a project, closing any existing one."""
-    old_session: Optional[ExpandChatSession] = None
+    old_session: ExpandChatSession | None = None
 
     with _expand_sessions_lock:
         old_session = _expand_sessions.pop(project_name, None)
@@ -379,7 +379,7 @@ async def create_expand_session(project_name: str, project_dir: Path) -> ExpandC
 
 async def remove_expand_session(project_name: str) -> None:
     """Remove and close an expansion session."""
-    session: Optional[ExpandChatSession] = None
+    session: ExpandChatSession | None = None
 
     with _expand_sessions_lock:
         session = _expand_sessions.pop(project_name, None)
