@@ -32,7 +32,7 @@ import { ProjectSetupRequired } from './components/ProjectSetupRequired'
 import { QuickChat } from './components/QuickChat'
 import { getDependencyGraph } from './lib/api'
 import { Loader2, Settings, Moon, Sun, RotateCcw, Box } from 'lucide-react'
-import type { Feature } from './lib/types'
+import type { Feature, ProjectSummary } from './lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -40,10 +40,180 @@ import { Badge } from '@/components/ui/badge'
 const STORAGE_KEY = 'autocoder-selected-project'
 const VIEW_MODE_KEY = 'autocoder-view-mode'
 
+type AuthUser = {
+  id: number
+  email: string | null
+  name: string | null
+  avatar_url: string | null
+  providers: string[]
+}
+
+function LoginScreen(props: { onNavigate: (path: string) => void }) {
+  const backendLoginGithub = `/auth/github/login?next=${encodeURIComponent('/profile')}`
+  const backendLoginGoogle = `/auth/google/login?next=${encodeURIComponent('/profile')}`
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <Card className="w-full max-w-md">
+        <CardContent className="p-6 space-y-5">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold">Sign in</h1>
+            <p className="text-sm text-muted-foreground">Use a social account. Tokens stay in HttpOnly cookies.</p>
+          </div>
+          <div className="grid gap-3">
+            <Button
+              className="w-full"
+              onClick={() => {
+                window.location.href = backendLoginGithub
+              }}
+            >
+              Login with GitHub
+            </Button>
+            <Button
+              className="w-full"
+              variant="secondary"
+              onClick={() => {
+                window.location.href = backendLoginGoogle
+              }}
+            >
+              Login with Google
+            </Button>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <a
+              className="underline"
+              href="/"
+              onClick={e => {
+                e.preventDefault()
+                props.onNavigate('/')
+              }}
+            >
+              Back to app
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function ProfileScreen(props: { onNavigate: (path: string) => void }) {
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchMe = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const resp = await fetch('/auth/me', { credentials: 'include' })
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status}`)
+      }
+      const data = (await resp.json()) as AuthUser
+      setUser(data)
+    } catch (e) {
+      setUser(null)
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void fetchMe()
+  }, [fetchMe])
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <Card className="w-full max-w-lg">
+        <CardContent className="p-6 space-y-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="text-xl font-semibold">Profile</h1>
+              <p className="text-sm text-muted-foreground">Session is validated via /auth/me</p>
+            </div>
+            <div>
+              <Button variant="outline" onClick={() => props.onNavigate('/')}>Back</Button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 size={16} className="animate-spin" />
+              Loading...
+            </div>
+          ) : user ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt="avatar"
+                    className="h-14 w-14 rounded-full border"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="h-14 w-14 rounded-full border flex items-center justify-center text-sm text-muted-foreground">
+                    N/A
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <div className="font-medium">{user.name || 'Unnamed'}</div>
+                  <div className="text-sm text-muted-foreground">{user.email || 'No email'}</div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {(user.providers || []).map(p => (
+                  <Badge key={p}>{p}</Badge>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={async () => {
+                    await fetch('/auth/logout', { method: 'POST', credentials: 'include' })
+                    props.onNavigate('/login')
+                  }}
+                >
+                  Logout
+                </Button>
+                <Button variant="secondary" onClick={() => void fetchMe()}>
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-sm text-muted-foreground">Not logged in.</div>
+              {error && <div className="text-sm text-destructive">{error}</div>}
+              <Button onClick={() => props.onNavigate('/login')}>Go to login</Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 // Bottom padding for main content when debug panel is collapsed (40px header + 8px margin)
 const COLLAPSED_DEBUG_PANEL_CLEARANCE = 48
 
 function App() {
+  const [routePath, setRoutePath] = useState(() => window.location.pathname)
+
+  const navigate = useCallback((path: string) => {
+    window.history.pushState({}, '', path)
+    setRoutePath(path)
+  }, [])
+
+  useEffect(() => {
+    const onPop = () => setRoutePath(window.location.pathname)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
   // Initialize selected project from localStorage
   const [selectedProject, setSelectedProject] = useState<string | null>(() => {
     try {
@@ -84,7 +254,7 @@ function App() {
   const { theme, setTheme, darkMode, toggleDarkMode, themes } = useTheme()
 
   // Get has_spec from the selected project
-  const selectedProjectData = projects?.find(p => p.name === selectedProject)
+  const selectedProjectData = projects?.find((p: ProjectSummary) => p.name === selectedProject)
   const hasSpec = selectedProjectData?.has_spec ?? true
 
   // Fetch graph data when in graph view
@@ -137,7 +307,7 @@ function App() {
 
   // Validate stored project exists (clear if project was deleted)
   useEffect(() => {
-    if (selectedProject && projects && !projects.some(p => p.name === selectedProject)) {
+    if (selectedProject && projects && !projects.some((p: ProjectSummary) => p.name === selectedProject)) {
       handleSelectProject(null)
     }
   }, [selectedProject, projects, handleSelectProject])
@@ -153,7 +323,7 @@ function App() {
       // D : Toggle debug window
       if (e.key === 'd' || e.key === 'D') {
         e.preventDefault()
-        setDebugOpen(prev => !prev)
+        setDebugOpen((prev: boolean) => !prev)
       }
 
       // T : Toggle terminal tab in debug panel
@@ -188,7 +358,7 @@ function App() {
       // A : Toggle assistant panel (when project selected and not in spec creation)
       if ((e.key === 'a' || e.key === 'A') && selectedProject && !isSpecCreating) {
         e.preventDefault()
-        setAssistantOpen(prev => !prev)
+        setAssistantOpen((prev: boolean) => !prev)
       }
 
       // , : Open settings
@@ -200,7 +370,7 @@ function App() {
       // G : Toggle between Kanban and Graph view (when project selected)
       if ((e.key === 'g' || e.key === 'G') && selectedProject) {
         e.preventDefault()
-        setViewMode(prev => prev === 'kanban' ? 'graph' : 'kanban')
+        setViewMode((prev: ViewMode) => (prev === 'kanban' ? 'graph' : 'kanban'))
       }
 
       // ? : Show keyboard shortcuts help
@@ -250,6 +420,14 @@ function App() {
 
   if (progress.total > 0 && progress.percentage === 0) {
     progress.percentage = Math.round((progress.passing / progress.total) * 100 * 10) / 10
+  }
+
+  if (routePath === '/login') {
+    return <LoginScreen onNavigate={navigate} />
+  }
+
+  if (routePath === '/profile') {
+    return <ProfileScreen onNavigate={navigate} />
   }
 
   if (!setupComplete) {

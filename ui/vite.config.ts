@@ -50,6 +50,10 @@ export default defineConfig({
         target: `http://${apiHost}:${apiPort}`,
         changeOrigin: true,
       },
+      '/auth': {
+        target: `http://${apiHost}:${apiPort}`,
+        changeOrigin: true,
+      },
       '/ws': {
         target: `ws://${apiHost}:${apiPort}`,
         ws: true,

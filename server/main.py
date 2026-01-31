@@ -46,6 +46,7 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from .routers import (
     agent_router,
     assistant_chat_router,
+    auth_router,
     devserver_router,
     expand_project_router,
     features_router,
@@ -396,6 +397,7 @@ if METRICS_ENABLED:
 # Include Routers
 # ============================================================================
 
+app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(features_router)
 app.include_router(agent_router)
