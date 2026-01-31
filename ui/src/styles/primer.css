@@ -1,0 +1,106 @@
+/* GitHub Primer Design System - Dark Mode */
+
+:root {
+  /* Canvas colors */
+  --primer-canvas-default: #0d1117;
+  --primer-canvas-subtle: #161b22;
+  --primer-canvas-inset: #010409;
+  --primer-canvas-overlay: #161b22;
+  
+  /* Border colors */
+  --primer-border-default: #30363d;
+  --primer-border-muted: #21262d;
+  --primer-border-subtle: rgba(240, 246, 252, 0.1);
+  
+  /* Foreground colors */
+  --primer-fg-default: #e6edf3;
+  --primer-fg-muted: #7d8590;
+  --primer-fg-subtle: #6e7681;
+  --primer-fg-on-emphasis: #ffffff;
+  
+  /* Accent colors */
+  --primer-accent-fg: #2f81f7;
+  --primer-accent-emphasis: #1f6feb;
+  --primer-accent-muted: rgba(56, 139, 253, 0.4);
+  --primer-accent-subtle: rgba(56, 139, 253, 0.15);
+  
+  /* Success colors */
+  --primer-success-fg: #3fb950;
+  --primer-success-emphasis: #238636;
+  --primer-success-muted: rgba(46, 160, 67, 0.4);
+  --primer-success-subtle: rgba(46, 160, 67, 0.15);
+  
+  /* Danger colors */
+  --primer-danger-fg: #f85149;
+  --primer-danger-emphasis: #da3633;
+  --primer-danger-muted: rgba(248, 81, 73, 0.4);
+  --primer-danger-subtle: rgba(248, 81, 73, 0.15);
+  
+  /* Warning colors */
+  --primer-attention-fg: #d29922;
+  --primer-attention-emphasis: #9e6a03;
+  --primer-attention-muted: rgba(187, 128, 9, 0.4);
+  --primer-attention-subtle: rgba(187, 128, 9, 0.15);
+  
+  /* Neutral colors */
+  --primer-neutral-muted: rgba(110, 118, 129, 0.4);
+  --primer-neutral-subtle: rgba(110, 118, 129, 0.1);
+  
+  /* Shadow */
+  --primer-shadow-small: 0 1px 0 rgba(1, 4, 9, 0.04);
+  --primer-shadow-medium: 0 3px 6px rgba(1, 4, 9, 0.12);
+  --primer-shadow-large: 0 8px 24px rgba(1, 4, 9, 0.2);
+  --primer-shadow-extra-large: 0 12px 48px rgba(1, 4, 9, 0.3);
+  
+  /* Typography */
+  --primer-font-mono: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+  --primer-font-size-body: 14px;
+  --primer-font-size-small: 12px;
+  --primer-font-size-large: 16px;
+  
+  /* Spacing */
+  --primer-space-xs: 4px;
+  --primer-space-sm: 8px;
+  --primer-space-md: 16px;
+  --primer-space-lg: 24px;
+  --primer-space-xl: 32px;
+  
+  /* Border radius */
+  --primer-radius-sm: 6px;
+  --primer-radius-md: 8px;
+  --primer-radius-lg: 12px;
+}
+
+/* Apply base styling */
+.primer-theme {
+  background-color: var(--primer-canvas-default);
+  color: var(--primer-fg-default);
+  font-size: var(--primer-font-size-body);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+}
+
+/* Scrollbar styling */
+.primer-theme ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.primer-theme ::-webkit-scrollbar-track {
+  background: var(--primer-canvas-inset);
+}
+
+.primer-theme ::-webkit-scrollbar-thumb {
+  background: var(--primer-border-default);
+  border-radius: var(--primer-radius-sm);
+}
+
+.primer-theme ::-webkit-scrollbar-thumb:hover {
+  background: var(--primer-border-muted);
+}
+
+/* Selection */
+.primer-theme ::selection {
+  background-color: var(--primer-accent-subtle);
+  color: var(--primer-fg-default);
+}

@@ -31,6 +31,7 @@ import { ResetProjectModal } from './components/ResetProjectModal'
 import { ProjectSetupRequired } from './components/ProjectSetupRequired'
 import { QuickChat } from './components/QuickChat'
 import { DesignWithAIModal } from './components/DesignWithAIModal'
+import { WorkspacePage } from './components/WorkspacePage'
 import { getDependencyGraph } from './lib/api'
 import { Loader2, Settings, Moon, Sun, RotateCcw, Box } from 'lucide-react'
 import type { Feature, ProjectSummary } from './lib/types'
@@ -431,6 +432,10 @@ function App() {
     return <ProfileScreen onNavigate={navigate} />
   }
 
+  if (routePath === '/workspace') {
+    return <WorkspacePage onNavigate={navigate} />
+  }
+
   if (!setupComplete) {
     return <SetupWizard onComplete={() => setSetupComplete(true)} />
   }
@@ -448,6 +453,14 @@ function App() {
 
             {/* Controls */}
             <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/workspace')}
+              >
+                <Box size={16} className="mr-2" />
+                Workspace
+              </Button>
               <ProjectSelector
                 projects={projects ?? []}
                 selectedProject={selectedProject}
