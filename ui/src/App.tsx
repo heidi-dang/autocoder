@@ -30,6 +30,7 @@ import { ThemeSelector } from './components/ThemeSelector'
 import { ResetProjectModal } from './components/ResetProjectModal'
 import { ProjectSetupRequired } from './components/ProjectSetupRequired'
 import { QuickChat } from './components/QuickChat'
+import { DesignWithAIModal } from './components/DesignWithAIModal'
 import { getDependencyGraph } from './lib/api'
 import { Loader2, Settings, Moon, Sun, RotateCcw, Box } from 'lucide-react'
 import type { Feature, ProjectSummary } from './lib/types'
@@ -468,6 +469,8 @@ function App() {
                     status={wsState.devServerStatus}
                     url={wsState.devServerUrl}
                   />
+
+                  <DesignWithAIModal />
 
                   <Button
                     onClick={() => setShowSettings(true)}
