@@ -167,3 +167,18 @@ ui/test-results/
 # Cloudflare Configuration
 # ===================
 .cloudflare/
+# ===================
+# AI-Generated Documentation (Private)
+# ===================
+# Per dev-environment-rule.md: AI-generated text must not be committed
+DEV_QUICK_START.md
+DEV_GUIDE.md
+OLLAMA_AUTO_DETECTION.md
+*.contract/
+detect_ollama.sh
+start_dev.sh
+start_backend_dev.sh
+start_frontend_dev.sh
+stop_dev.sh
+.env.dev
+ui/.env.development

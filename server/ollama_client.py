@@ -5,21 +5,52 @@ Ollama API Client
 Client for interacting with local Ollama instances.
 Supports listing available models and streaming chat completions.
 
+Auto-detects running Ollama instance by:
+1. Checking OLLAMA_BASE_URL environment variable
+2. Scanning common ports (11434, 36199, 11435, 8000, 8080, 5000)
+3. Falling back to default http://localhost:11434
+
 Environment variables:
 - OLLAMA_BASE_URL (optional, default: http://localhost:11434)
 """
 
 import os
+import sys
 from collections.abc import AsyncGenerator, Iterable
+from pathlib import Path
 
 import httpx
+
+# Add parent directory to path for importing ollama_detection
+root = Path(__file__).parent.parent
+if str(root) not in sys.path:
+    sys.path.insert(0, str(root))
+
+try:
+    from ollama_detection import get_ollama_url
+except ImportError:
+    # Fallback if detection module not available
+    def get_ollama_url() -> str:
+        return os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
 DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 
 
 def get_ollama_base_url() -> str:
-    """Get the Ollama base URL from settings or environment."""
-    return os.getenv("OLLAMA_BASE_URL", DEFAULT_OLLAMA_BASE_URL)
+    """
+    Get the Ollama base URL with auto-detection.
+    
+    Tries to detect running Ollama instance by checking common ports.
+    Falls back to environment variable or default.
+    """
+    # First try to get URL from the detection utility
+    detected_url = get_ollama_url()
+    
+    # If detection returned empty/None, use default
+    if not detected_url or detected_url == "":
+        return DEFAULT_OLLAMA_BASE_URL
+    
+    return detected_url
 
 
 def is_ollama_configured() -> bool:
