@@ -12,7 +12,7 @@ import re
 import threading
 import time
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -258,7 +258,7 @@ def register_project(name: str, path: Path) -> None:
         project = Project(
             name=name,
             path=path.as_posix(),
-            created_at=datetime.now()
+            created_at=datetime.now(UTC)
         )
         session.add(project)
 
@@ -552,12 +552,12 @@ def set_setting(key: str, value: str) -> None:
         setting = session.query(Settings).filter(Settings.key == key).first()
         if setting:
             setting.value = value
-            setting.updated_at = datetime.now()
+            setting.updated_at = datetime.now(UTC)
         else:
             setting = Settings(
                 key=key,
                 value=value,
-                updated_at=datetime.now()
+                updated_at=datetime.now(UTC)
             )
             session.add(setting)
 

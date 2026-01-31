@@ -9,8 +9,11 @@ Fallback chain:
 2. Base template: .claude/templates/{name}.template.md
 """
 
+import logging
 import shutil
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # Base templates location (generic templates)
 TEMPLATES_DIR = Path(__file__).parent / ".claude" / "templates"
@@ -46,16 +49,16 @@ def load_prompt(name: str, project_dir: Path | None = None) -> str:
         if project_path.exists():
             try:
                 return project_path.read_text(encoding="utf-8")
-            except (OSError, PermissionError):
-                pass
+            except (OSError, PermissionError) as e:
+                logger.warning("Failed to read project-specific prompt %s: %s", project_path, e)
 
     # 2. Try base template
     template_path = TEMPLATES_DIR / f"{name}.template.md"
     if template_path.exists():
         try:
             return template_path.read_text(encoding="utf-8")
-        except (OSError, PermissionError):
-            pass
+        except (OSError, PermissionError) as e:
+            logger.error("Failed to read base template %s: %s", template_path, e)
 
     raise FileNotFoundError(
         f"Prompt '{name}' not found in:\n"
@@ -212,8 +215,8 @@ def scaffold_project_prompts(project_dir: Path) -> Path:
             try:
                 shutil.copy(template_path, dest_path)
                 copied_files.append(dest_name)
-            except (OSError, PermissionError):
-                pass
+            except (OSError, PermissionError) as e:
+                logger.warning("Failed to copy template %s to %s: %s", template_name, dest_path, e)
 
     # Copy allowed_commands.yaml template to .autocoder/
     examples_dir = Path(__file__).parent / "examples"
@@ -223,8 +226,8 @@ def scaffold_project_prompts(project_dir: Path) -> Path:
         try:
             shutil.copy(allowed_commands_template, allowed_commands_dest)
             copied_files.append(".autocoder/allowed_commands.yaml")
-        except (OSError, PermissionError):
-            pass
+        except (OSError, PermissionError) as e:
+            logger.warning("Failed to copy allowed_commands.yaml template: %s", e)
 
     if copied_files:
         pass
@@ -257,7 +260,8 @@ def has_project_prompts(project_dir: Path) -> bool:
             try:
                 content = legacy_spec.read_text(encoding="utf-8")
                 return "<project_specification>" in content
-            except (OSError, PermissionError):
+            except (OSError, PermissionError) as e:
+                logger.debug("Failed to read legacy spec %s: %s", legacy_spec, e)
                 return False
         return False
 
@@ -265,7 +269,8 @@ def has_project_prompts(project_dir: Path) -> bool:
     try:
         content = app_spec.read_text(encoding="utf-8")
         return "<project_specification>" in content
-    except (OSError, PermissionError):
+    except (OSError, PermissionError) as e:
+        logger.debug("Failed to read app spec %s: %s", app_spec, e)
         return False
 
 
@@ -294,5 +299,6 @@ def copy_spec_to_project(project_dir: Path) -> None:
         try:
             shutil.copy(project_spec, spec_dest)
             return
-        except (OSError, PermissionError):
+        except (OSError, PermissionError) as e:
+            logger.warning("Failed to copy spec to project root: %s", e)
             return

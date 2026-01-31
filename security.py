@@ -11,7 +11,6 @@ import os
 import re
 import shlex
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -291,7 +290,7 @@ DEFAULT_PKILL_PROCESSES = {
 
 def validate_pkill_command(
     command_string: str,
-    extra_processes: Optional[set[str]] = None
+    extra_processes: set[str] | None = None
 ) -> tuple[bool, str]:
     """
     Validate pkill commands - only allow killing dev-related processes.
@@ -482,7 +481,7 @@ def get_org_config_path() -> Path:
     return Path.home() / ".autocoder" / "config.yaml"
 
 
-def load_org_config() -> Optional[dict]:
+def load_org_config() -> dict | None:
     """
     Load organization-level config from ~/.autocoder/config.yaml.
 
@@ -495,7 +494,7 @@ def load_org_config() -> Optional[dict]:
         return None
 
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             config = yaml.safe_load(f)
 
         if not config:
@@ -565,12 +564,12 @@ def load_org_config() -> Optional[dict]:
     except yaml.YAMLError as e:
         logger.warning(f"Failed to parse org config at {config_path}: {e}")
         return None
-    except (IOError, OSError) as e:
+    except OSError as e:
         logger.warning(f"Failed to read org config at {config_path}: {e}")
         return None
 
 
-def load_project_commands(project_dir: Path) -> Optional[dict]:
+def load_project_commands(project_dir: Path) -> dict | None:
     """
     Load allowed commands from project-specific YAML config.
 
@@ -586,7 +585,7 @@ def load_project_commands(project_dir: Path) -> Optional[dict]:
         return None
 
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             config = yaml.safe_load(f)
 
         if not config:
@@ -650,7 +649,7 @@ def load_project_commands(project_dir: Path) -> Optional[dict]:
     except yaml.YAMLError as e:
         logger.warning(f"Failed to parse project config at {config_path}: {e}")
         return None
-    except (IOError, OSError) as e:
+    except OSError as e:
         logger.warning(f"Failed to read project config at {config_path}: {e}")
         return None
 
@@ -702,7 +701,7 @@ def validate_project_command(cmd_config: dict) -> tuple[bool, str]:
     return True, ""
 
 
-def get_effective_commands(project_dir: Optional[Path]) -> tuple[set[str], set[str]]:
+def get_effective_commands(project_dir: Path | None) -> tuple[set[str], set[str]]:
     """
     Get effective allowed and blocked commands after hierarchy resolution.
 
@@ -753,7 +752,7 @@ def get_effective_commands(project_dir: Optional[Path]) -> tuple[set[str], set[s
     return allowed, blocked
 
 
-def get_project_allowed_commands(project_dir: Optional[Path]) -> set[str]:
+def get_project_allowed_commands(project_dir: Path | None) -> set[str]:
     """
     Get the set of allowed commands for a project.
 
@@ -769,7 +768,7 @@ def get_project_allowed_commands(project_dir: Optional[Path]) -> set[str]:
     return allowed
 
 
-def get_effective_pkill_processes(project_dir: Optional[Path]) -> set[str]:
+def get_effective_pkill_processes(project_dir: Path | None) -> set[str]:
     """
     Get effective pkill process names after hierarchy resolution.
 

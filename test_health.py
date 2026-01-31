@@ -3,6 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+
 @pytest.fixture()
 def client(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AUTOCODER_ALLOW_REMOTE", "1")
