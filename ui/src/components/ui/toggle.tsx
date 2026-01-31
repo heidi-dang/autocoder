@@ -44,4 +44,6 @@ function Toggle({
   );
 }
 
+Toggle.displayName = "Toggle";
+
 export { Toggle, toggleVariants };

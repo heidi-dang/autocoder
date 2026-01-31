@@ -86,4 +86,6 @@ function TabsContent({
   );
 }
 
+TabsContent.displayName = "TabsContent";
+
 export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };

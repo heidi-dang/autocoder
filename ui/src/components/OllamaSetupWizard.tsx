@@ -77,8 +77,8 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
       } else {
         setCurrentStep('configure');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
       if (!res.ok) throw new Error('Failed to fetch install script');
       const data = await res.json();
       setInstallScript(data);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching install script:', err);
     }
   };
@@ -101,7 +101,7 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
       if (!res.ok) throw new Error('Failed to fetch recommended models');
       const data = await res.json();
       setRecommendedModels(data.recommended);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching recommended models:', err);
     }
   };
@@ -128,8 +128,8 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
       } else {
         setError(data.message || 'Installation failed. Please follow manual instructions.');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -149,8 +149,8 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
       } else {
         setError(data.message || 'Failed to start service');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -173,8 +173,8 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
       } else {
         setError(data.message || 'Download failed');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setDownloadingModel(null);
     }
@@ -200,8 +200,8 @@ export function OllamaSetupWizard({ onComplete }: { onComplete: () => void }) {
 
       setCurrentStep('complete');
       setTimeout(() => onComplete(), 1500);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
