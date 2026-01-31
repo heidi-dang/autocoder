@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { GitBranch, Loader2 } from "lucide-react";
+import { GitBranch } from "lucide-react";
 // import { useCloneProjectRepository } from "../hooks/useProjects";
 import {
   Dialog,

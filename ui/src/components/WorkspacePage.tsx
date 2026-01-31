@@ -12,8 +12,6 @@ interface WorkspacePageProps {
 }
 
 export function WorkspacePage({ onNavigate }: WorkspacePageProps) {
-  const { isGenerating } = useWorkspaceStore();
-
   // Demo: populate with example data
   const loadDemo = () => {
     const { setSpecification, setPlan, setFileChanges, addContext } = useWorkspaceStore.getState();
